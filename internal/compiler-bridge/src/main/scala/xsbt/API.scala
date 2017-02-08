@@ -11,7 +11,7 @@ object API {
   val name = "xsbt-api"
 }
 
-final class API(val global: CallbackGlobal) {
+final class API(val global: CallbackGlobal) extends GlobalHelpers {
   import global._
 
   def newPhase(prev: Phase) = new ApiPhase(prev)
@@ -74,9 +74,14 @@ final class API(val global: CallbackGlobal) {
         case _ =>
       }
     }
-    def isTopLevel(sym: Symbol): Boolean =
-      (sym ne null) && (sym != NoSymbol) && !sym.isImplClass && !sym.isNestedClass && sym.isStatic &&
-        !sym.hasFlag(Flags.SYNTHETIC) && !sym.hasFlag(Flags.JAVA)
+    def isTopLevel(sym: Symbol): Boolean = {
+      !ignoredSymbol(sym) &&
+        sym.isStatic &&
+        !sym.isImplClass &&
+        !sym.hasFlag(Flags.SYNTHETIC) &&
+        !sym.hasFlag(Flags.JAVA) &&
+        !sym.isNestedClass
+    }
   }
 
 }
