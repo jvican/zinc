@@ -54,13 +54,6 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     traverser.traverse(tree)
     val namesUsedAtTopLevel = traverser.namesUsedAtTopLevel
 
-    // Decode scala name (e.g. operator).
-    // This is copied from Names$Name to call it once on given name (at this time we don't have names anymore)
-    def decodeName(name: String): String = {
-      val decoded = if (name.contains("$")) reflect.NameTransformer.decode(name) else name
-      decoded.trim
-    }
-
     if (namesUsedAtTopLevel.nonEmpty) {
       val classOrModuleDef = firstClassOrModuleDef(tree)
       classOrModuleDef match {
@@ -68,16 +61,13 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
           val sym = classOrModuleDef.symbol
           val firstClassSymbol = if (sym.isModule) sym.moduleClass else sym
           val firstClassName = className(firstClassSymbol)
-          traverser.usedNamesFromClass(firstClassName) ++= namesUsedAtTopLevel.map(decodeName)
+          traverser.usedNamesFromClass(firstClassName) ++= namesUsedAtTopLevel
         case None =>
           reporter.warning(unit.position(0), Feedback.OrphanNames)
       }
     }
 
-    traverser.usedNamesFromClasses.map {
-      case (name, names) =>
-        name -> names.map(decodeName)
-    }
+    traverser.usedNamesFromClasses
   }
 
   private def firstClassOrModuleDef(tree: Tree): Option[Tree] = {
@@ -101,8 +91,10 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     val addSymbol: Symbol => Unit = {
       symbol =>
         val enclosingNonLocalClass = resolveEnclosingNonLocalClass
-        if (enclosingNonLocalClass.symbolsCache.add(symbol) && eligibleAsUsedName(symbol))
+        val cache = enclosingNonLocalClass.symbolsCache
+        if (!cache.contains(symbol) && eligibleAsUsedName(symbol)) {
           enclosingNonLocalClass.addName(symbol.name)
+        }
     }
 
     /** Returns mutable set with all names from given class used in current context */
@@ -126,15 +118,23 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     private val inspectedOriginalTrees = collection.mutable.Set.empty[Tree]
     private val inspectedTypeTrees = collection.mutable.Set.empty[Tree]
 
-    private val handleMacroExpansion: Tree => Unit =
-      original => if (inspectedOriginalTrees.add(original)) traverse(original)
+    private val handleMacroExpansion: Tree => Unit = { original =>
+      if (!inspectedOriginalTrees.contains(original)) {
+        inspectedOriginalTrees += original
+        traverse(original)
+      }
+    }
 
     private def handleClassicTreeNode(tree: Tree): Unit = tree match {
       case _: DefTree | _: Template => ()
       case Import(_, selectors: List[ImportSelector]) =>
         val enclosingNonLocalClass = resolveEnclosingNonLocalClass()
-        def usedNameInImportSelector(name: Name): Unit =
-          if ((name != null) && (name != nme.WILDCARD)) enclosingNonLocalClass.addName(name)
+        def usedNameInImportSelector(name: Name): Unit = {
+          if (!isEmptyName(name) && (name != nme.WILDCARD) &&
+            !enclosingNonLocalClass.containsName(name)) {
+            enclosingNonLocalClass.addName(name)
+          }
+        }
         selectors foreach { selector =>
           usedNameInImportSelector(selector.name)
           usedNameInImportSelector(selector.rename)
@@ -145,8 +145,10 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
       // to types but that might be a bad thing because it might expand aliases eagerly which
       // not what we need
       case t: TypeTree if t.original != null =>
-        if (inspectedTypeTrees.add(t.original)) {
-          t.original.foreach(traverse)
+        val original = t.original 
+        if (!inspectedTypeTrees.contains(original)) {
+          inspectedTypeTrees += original
+          original.foreach(traverse)
         }
       case t if t.hasSymbolField =>
         addSymbol(t.symbol)
@@ -158,20 +160,27 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     private case class EnclosingNonLocalClass(currentOwner: Symbol) {
       val symbolsCache = mutable.Set.empty[Symbol]
 
-      private val usedNamesSet: collection.mutable.Set[String] = {
+      private val nonLocalClass = {
         val fromClass = enclOrModuleClass(currentOwner)
-        if (fromClass == NoSymbol || fromClass.hasPackageFlag)
-          namesUsedAtTopLevel
-        else {
-          val fromNonLocalClass = localToNonLocalClass.resolveNonLocal(fromClass)
-          usedNamesFromClass(ExtractUsedNames.this.className(fromNonLocalClass))
-        }
+        if (ignoredSymbol(fromClass) || fromClass.hasPackageFlag) null
+        else localToNonLocalClass.resolveNonLocal(fromClass)
       }
 
+      private val usedNamesSet: collection.mutable.Set[String] = {
+        if (nonLocalClass == null) namesUsedAtTopLevel
+        else usedNamesFromClass(ExtractUsedNames.this.className(nonLocalClass))
+      }
+
+      /* Decode name according to Scala internals rule and trim. */
+      @inline private def decodeName(name: Name) = name.decode.trim
+
       def addName(name: Name): Unit = {
-        usedNamesSet.add(name.toString)
+        usedNamesSet += decodeName(name)
         ()
       }
+
+      def containsName(name: Name): Boolean =
+        usedNamesSet.contains(decodeName(name))
     }
 
     private var _lastEnclosingNonLocalClass: EnclosingNonLocalClass = null
@@ -183,6 +192,9 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
      * is a local class.
      */
     private def resolveEnclosingNonLocalClass(): EnclosingNonLocalClass = {
+      /* Note that `currentOwner` is set by Global and points to the owner of
+       * the tree that we traverse. Therefore, it's not ensured to be a non local
+       * class. The non local class is resolved inside `EnclosingNonLocalClass`. */
       def newOne(): EnclosingNonLocalClass = {
         _lastEnclosingNonLocalClass = EnclosingNonLocalClass(currentOwner)
         _lastEnclosingNonLocalClass
