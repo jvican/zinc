@@ -80,7 +80,6 @@ lazy val zincRoot: Project = (project in file(".")).
     zinc,
     zincTesting,
     zincPersist,
-    zincBenchmarks,
     zincCore,
     zincIvyIntegration,
     zincCompile,
@@ -192,6 +191,7 @@ lazy val zincCore = (project in internalPath / "zinc-core").
   ).
   configure(addSbtIO, addSbtUtilLogging, addSbtUtilRelation)
 
+// This project is 2.12 only, don't aggregate to zincRoot
 lazy val zincBenchmarks = (project in internalPath / "zinc-benchmarks").
   dependsOn(compilerInterface % "compile->compile;compile->test").
   dependsOn(compilerBridge, zincCore, zincTesting % Test).
@@ -334,6 +334,7 @@ lazy val publishBridgesAndTest = Command.args("publishBridgesAndTest", "<version
     }) :::
     s"plz $version zincRoot/test" ::
     s"plz $version zincRoot/scripted" ::
+    s"zincBenchmarks/test" ::
     state
 }
 
