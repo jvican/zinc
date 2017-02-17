@@ -46,6 +46,80 @@ trait GlobalHelpers {
     }).traverse(tpe)
   }
 
+  private[xsbt] class TypeDependencyTraverser(addDependency: Symbol => Unit)
+    extends TypeTraverser {
+
+    /** Add type dependency ignoring packages and inheritance info from classes. */
+    @inline private def addTypeSymbolDependency(symbol: Symbol): Unit = {
+      addDependency(symbol)
+      if (!symbol.isClass) {
+        traverse(symbol.info)
+      }
+    }
+
+    @inline private def addTypeParam(symbol: Symbol): Unit = {
+      addTypeSymbolDependency(symbol)
+      traverse(symbol.info.prefix)
+    }
+
+    @inline private def addTypeDependency(tpe: Type): Unit = {
+      val symbol = tpe.typeSymbolDirect
+      if (!symbol.hasPackageFlag) {
+        addTypeSymbolDependency(symbol)
+        traverse(tpe.prefix)
+      }
+    }
+
+    // Define cache and populate it with known types at initialization time
+    private val visited = scala.collection.mutable.HashSet.empty[Type]
+
+    /** Clear the cache after every `traverse` invocation at the call-site. */
+    private[xsbt] def reinitializeVisited(): Unit = visited.clear()
+
+    /**
+     * Traverse the type and its info to track all type dependencies.
+     *
+     * Note that tpe cannot be either `NoSymbol` or `null`.
+     * Check that you don't pass those types at the call-site.
+     */
+    override def traverse(tpe: Type): Unit = {
+      if (!visited.contains(tpe)) {
+        visited += tpe
+        tpe match {
+          case singleRef: SingleType =>
+            addTypeDependency(singleRef)
+
+          case typeRef: TypeRef =>
+            addTypeDependency(typeRef)
+
+          case MethodType(_, _) | NullaryMethodType(_) =>
+            // Poly method types have abstract parameters represented as symbols
+            tpe.params.foreach(symbol => addTypeDependency(symbol.tpe))
+            // Traverse materialized types that are concrete at use site
+            traverse(tpe.underlying)
+
+          case PolyType(_, _) =>
+            // Higher kinded types have abstract parameters represented as symbols
+            tpe.typeParams.foreach(addTypeParam)
+            // Traverse materialized types that are concrete at use site
+            traverse(tpe.underlying)
+
+          case TypeBounds(lo, hi) =>
+            // Ignore default types for lo and hi bounds
+            if (!(lo == definitions.NothingTpe)) traverse(lo)
+            if (!(hi == definitions.AnyTpe)) traverse(hi)
+
+          case RefinedType(_, _) | ThisType(_) | ConstantType(_) =>
+            traverse(tpe.underlying)
+
+          case _ =>
+            mapOver(tpe)
+            ()
+        }
+      }
+    }
+  }
+
   /** Returns true if given tree contains macro attchment. In such case calls func on tree from attachment. */
   def processMacroExpansion(in: Tree)(func: Tree => Unit): Boolean = {
     // Hotspot

@@ -92,6 +92,21 @@ class DependencySpecification extends UnitSpec {
     assert(inheritance("Bar") === Set.empty)
   }
 
+  it should "extract type dependencies from nested object" in {
+    val srcA = "abstract class A { val t: AnyRef; object X { def foo: t.type = t } }"
+    val srcB = """class B extends A { val t: String = "a" }"""
+    val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = true)
+    val classDependencies =
+      compilerForTesting.extractDependenciesFromSrcs(srcA, srcB)
+
+    val memberRef = classDependencies.memberRef
+    val inheritance = classDependencies.inheritance
+    val localInheritance = classDependencies.localInheritance
+    println(memberRef)
+    println(inheritance)
+    println(localInheritance)
+  }
+
   it should "extract class dependency on a object correctly" in {
     val srcA =
       """object A {

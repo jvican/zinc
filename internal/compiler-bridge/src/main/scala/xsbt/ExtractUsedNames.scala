@@ -125,10 +125,12 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
       }
     }
 
+    object TypeDependencyTraverser extends TypeDependencyTraverser(addSymbol)
+
     private def handleClassicTreeNode(tree: Tree): Unit = tree match {
       case _: DefTree | _: Template => ()
       case Import(_, selectors: List[ImportSelector]) =>
-        val enclosingNonLocalClass = resolveEnclosingNonLocalClass()
+        val enclosingNonLocalClass = resolveEnclosingNonLocalClass
         def usedNameInImportSelector(name: Name): Unit = {
           if (!isEmptyName(name) && (name != nme.WILDCARD) &&
             !enclosingNonLocalClass.containsName(name)) {
@@ -145,22 +147,25 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
       // to types but that might be a bad thing because it might expand aliases eagerly which
       // not what we need
       case t: TypeTree if t.original != null =>
-        val original = t.original 
+        val original = t.original
         if (!inspectedTypeTrees.contains(original)) {
           inspectedTypeTrees += original
           original.foreach(traverse)
         }
       case t if t.hasSymbolField =>
         addSymbol(t.symbol)
-        if (t.tpe != null)
-          foreachNotPackageSymbolInType(t.tpe)(addSymbol)
+        val tpe = t.tpe
+        if (!ignoredType(tpe)) {
+          TypeDependencyTraverser.traverse(tpe)
+          TypeDependencyTraverser.reinitializeVisited()
+        }
       case _ =>
     }
 
     private case class EnclosingNonLocalClass(currentOwner: Symbol) {
       val symbolsCache = mutable.Set.empty[Symbol]
 
-      private val nonLocalClass = {
+      val nonLocalClass = {
         val fromClass = enclOrModuleClass(currentOwner)
         if (ignoredSymbol(fromClass) || fromClass.hasPackageFlag) null
         else localToNonLocalClass.resolveNonLocal(fromClass)
@@ -191,7 +196,7 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
      * The second returned value indicates if the enclosing class for `currentOwner`
      * is a local class.
      */
-    private def resolveEnclosingNonLocalClass(): EnclosingNonLocalClass = {
+    private def resolveEnclosingNonLocalClass: EnclosingNonLocalClass = {
       /* Note that `currentOwner` is set by Global and points to the owner of
        * the tree that we traverse. Therefore, it's not ensured to be a non local
        * class. The non local class is resolved inside `EnclosingNonLocalClass`. */

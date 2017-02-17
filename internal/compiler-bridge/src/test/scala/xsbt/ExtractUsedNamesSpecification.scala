@@ -66,6 +66,7 @@ class ExtractUsedNamesSpecification extends UnitSpec {
                   |class P1 extends P0
                   |object B {
                   |  type S = Y
+                  |  type W[DontCapture] =
                   |  val lista: List[A] = ???
                   |  val at: A#T = ???
                   |  val as: S = ???
@@ -86,12 +87,16 @@ class ExtractUsedNamesSpecification extends UnitSpec {
                   |}
                   |object Test_bar {
                   |  val x = B.bar(???)
-                  |}""".stripMargin
+                  |}
+                  |object Test_baz {
+                  |  val y = B.
+                  |}
+                  |""".stripMargin
     val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = true)
     val usedNames = compilerForTesting.extractUsedNamesFromSrc(src1, src2)
-    val expectedNames_lista = standardNames ++ Set("Test_lista", "x", "B", "lista", "package", "List", "A")
-    val expectedNames_at = standardNames ++ Set("Test_at", "x", "B", "at", "A", "T")
-    val expectedNames_as = standardNames ++ Set("Test_as", "x", "B", "as", "S")
+    val expectedNames_lista = standardNames ++ Set("Test_lista", "x", "B", "lista", "List", "A")
+    val expectedNames_at = standardNames ++ Set("Test_at", "x", "B", "at", "A", "T", "X0", "X1")
+    val expectedNames_as = standardNames ++ Set("Test_as", "x", "B", "as", "S", "Y")
     val expectedNames_foo = standardNames ++ Set("Test_foo", "x", "B", "foo", "M", "N",
       "Predef", "???", "Nothing")
     val expectedNames_bar = standardNames ++ Set("Test_bar", "x", "B", "bar", "Param", "P1", "P0",

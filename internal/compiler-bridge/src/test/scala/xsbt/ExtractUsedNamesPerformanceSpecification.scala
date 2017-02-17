@@ -37,7 +37,7 @@ class ExtractUsedNamesPerformanceSpecification extends UnitSpec {
       zipfs.foreach { fs => try fs.close catch { case _: Throwable => /*ignore*/ } }
     import org.scalatest.concurrent.Timeouts._
     import org.scalatest.time.SpanSugar._
-    val usedNames = failAfter(30 seconds) {
+    val usedNames = failAfter(10 seconds) {
       val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = true)
       compilerForTesting.extractUsedNamesFromSrc(src)
     }
@@ -69,7 +69,7 @@ class ExtractUsedNamesPerformanceSpecification extends UnitSpec {
                  |}""".stripMargin
     val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = true)
     val usedNames = compilerForTesting.extractUsedNamesFromSrc(src)
-    val expectedNamesForTuplerInstances = Set("Tupler", "AnyRef", "L", "Out0", "scala", "HList")
+    val expectedNamesForTuplerInstances = Set("Tupler", "AnyRef", "L", "Out0", "scala", "HList", "Object")
     val expectedNamesForTuplerInstancesRefinement = Set("Out0")
     assert(usedNames("TuplerInstances") -- scalaDiff === expectedNamesForTuplerInstances -- scalaDiff)
     assert(usedNames("TuplerInstances.<refinement>") -- scalaDiff === expectedNamesForTuplerInstancesRefinement -- scalaDiff)
