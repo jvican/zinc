@@ -17,11 +17,13 @@ package inc
 import xsbti.{ Maybe, Position, Problem, Reporter, Severity }
 import java.io.File
 import java.util.EnumMap
+
 import scala.collection.mutable
 import LoggerReporter._
 import sbt.util.Logger
 import Logger.{ m2o, o2m, position, problem }
-import Severity.{ Error, Info => SInfo, Warn }
+import sbt.util.InterfaceUtil.{ jo2o, problem }
+import Severity.{ Error, Warn, Info => SInfo }
 
 object LoggerReporter {
   final class PositionKey(pos: Position) {

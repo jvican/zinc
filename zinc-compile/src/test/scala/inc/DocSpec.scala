@@ -11,6 +11,8 @@ import sbt.internal.inc.javac.JavaCompilerSpec
 import sbt.internal.inc.LoggerReporter
 import xsbti.compile.IncToolOptionsUtil
 import sbt.internal.util.DirectoryStoreFactory
+import sbt.inc.Doc
+
 import scala.json.ast.unsafe.JValue
 import sjsonnew.IsoString
 import sjsonnew.support.scalajson.unsafe.{ CompactPrinter, Converter, FixedParser }
