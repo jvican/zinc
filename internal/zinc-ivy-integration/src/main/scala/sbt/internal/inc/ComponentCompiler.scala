@@ -46,7 +46,7 @@ private[sbt] object ComponentCompiler {
  * The compiled classes are cached using the provided component manager according
  * to the actualVersion field of the RawCompiler.
  */
-private[inc] class IvyComponentCompiler(compiler: RawCompiler, manager: ZincComponentManager, ivyConfiguration: IvyConfiguration, fileToStore: File => CacheStore, sourcesModule: ModuleID, log: Logger) {
+private[sbt] class IvyComponentCompiler(compiler: RawCompiler, manager: ZincComponentManager, ivyConfiguration: IvyConfiguration, fileToStore: File => CacheStore, sourcesModule: ModuleID, log: Logger) {
   import ComponentCompiler._
   // private val xsbtiInterfaceModuleName = "compiler-interface"
   // private val xsbtiInterfaceID = s"interface-$incrementalVersion"

@@ -1,11 +1,10 @@
 // import Project.Initialize
 import Util._
 import Dependencies._
-import Scripted._
 // import StringUtilities.normalize
 import com.typesafe.tools.mima.core._, ProblemFilters._
 
-def baseVersion = "1.0.0-X8-SNAPSHOT"
+def baseVersion = "1.0.0-X9-SNAPSHOT"
 def internalPath   = file("internal")
 
 lazy val compilerBridgeScalaVersions = Seq(scala212, scala211, scala210)
@@ -143,6 +142,62 @@ lazy val zinc = (project in file("zinc")).
   configure(addBaseSettingsAndTestDeps).
   settings(
     name := "zinc"
+  )
+
+def sbtToolingPath = file("zinc-sbt")
+
+lazy val zincSbtPlugin = (project in sbtToolingPath / "sbt-plugin").
+  disablePlugins(SbtScalariform).
+  settings(
+    name := "zinc-sbt-plugin",
+    scalaVersion := "2.10.6",
+    crossScalaVersions := Seq("2.10.6"),
+    libraryDependencies += "com.lihaoyi" %% "fansi" % "0.2.3",
+    sbt.ScriptedPlugin.scriptedSettings,
+    sources in (Compile, doc) := Seq.empty,
+    publishArtifact in (Compile, packageDoc) := false,
+    sbtPlugin := true,
+    scalacOptions := Seq(),
+    scriptedLaunchOpts ++= Seq(
+      s"-Dplugin.version=${version.value}",
+      "-XX:MaxPermSize=256m",
+      "-Xmx2g",
+      "-Xss2m"
+    ),
+    scriptedBufferLog := false
+  )
+
+addCommandAlias("runTestsPlugin", ";+zincSbtProxy/publishLocal;so zincSbtPlugin/scripted")
+
+lazy val zincSbtProxy = (project in sbtToolingPath / "proxy").
+  dependsOn(zincCompileCore, zincCore, zinc % "compile->test").
+  disablePlugins(SbtScalariform).
+  configure(addBaseSettingsAndTestDeps).
+  settings(
+    name := "zinc-sbt-proxy",
+    assemblyJarName in assembly :=
+      name.value + "_" + scalaVersion.value + "-" + version.value + "-assembly.jar",
+    test in assembly := {},
+/*    assemblyMergeStrategy in assembly := {
+      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+      case x => MergeStrategy.first
+    },*/
+    packagedArtifact in Compile in packageBin := {
+      val temp = (packagedArtifact in Compile in packageBin).value
+      val (art, slimJar) = temp
+      val fatJar = new File(crossTarget.value + "/" + (assemblyJarName in assembly).value)
+      val _ = assembly.value
+      IO.copy(List(fatJar -> slimJar), overwrite = true)
+      (art, slimJar)
+    },
+    publishArtifact in Compile := true,
+    Keys.`package` in Compile := {
+      val slimJar = (Keys.`package` in Compile).value
+      val fatJar  = new File(crossTarget.value + "/" + (assemblyJarName in assembly).value)
+      val _       = assembly.value
+      IO.copy(List(fatJar -> slimJar), overwrite = true)
+      slimJar
+    }
   )
 
 lazy val zincTesting = (project in internalPath / "zinc-testing").
@@ -364,15 +419,15 @@ lazy val otherRootSettings = Seq(
 )
 
 def scriptedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
-  val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
+  val result = Scripted.scriptedSource(dir => (s: State) => Scripted.scriptedParser(dir)).parsed
   publishAll.value
   // These two projects need to be visible in a repo even if the default
   // local repository is hidden, so we publish them to an alternate location and add
   // that alternate repo to the running scripted test (in Scripted.scriptedpreScripted).
   (altLocalPublish in compilerInterface).value
   (altLocalPublish in compilerBridge).value
-  doScripted((fullClasspath in zincScripted in Test).value,
-    (scalaInstance in zincScripted).value, scriptedSource.value, result, scriptedPrescripted.value)
+  Scripted.doScripted((fullClasspath in zincScripted in Test).value,
+    (scalaInstance in zincScripted).value, Scripted.scriptedSource.value, result, Scripted.scriptedPrescripted.value)
 }
 
 def addSbtAlternateResolver(scriptedRoot: File) = {
@@ -393,9 +448,9 @@ def addSbtAlternateResolver(scriptedRoot: File) = {
 }
 
 def scriptedUnpublishedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
-  val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
-  doScripted((fullClasspath in zincScripted in Test).value,
-    (scalaInstance in zincScripted).value, scriptedSource.value, result, scriptedPrescripted.value)
+  val result = Scripted.scriptedSource(dir => (s: State) => Scripted.scriptedParser(dir)).parsed
+  Scripted.doScripted((fullClasspath in zincScripted in Test).value,
+    (scalaInstance in zincScripted).value, Scripted.scriptedSource.value, result, Scripted.scriptedPrescripted.value)
 }
 
 lazy val publishAll = TaskKey[Unit]("publish-all")
