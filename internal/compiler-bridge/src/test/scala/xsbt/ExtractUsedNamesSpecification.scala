@@ -67,7 +67,7 @@ class ExtractUsedNamesSpecification extends UnitSpec {
     val srcB = "class B extends A { type T = Int }"
     val srcC = "object C extends B"
     val srcD = "object D { C.X.foo(12) }"
-    val compilerForTesting = new ScalaCompilerForUnitTesting(nameHashing = true)
+    val compilerForTesting = new ScalaCompilerForUnitTesting
     val usedNames = compilerForTesting.extractUsedNamesFromSrc(srcA, srcB, srcC, srcD)
     val scalaVersion = scala.util.Properties.versionNumberString
     // TODO: Find out what's making these types appear in 2.10

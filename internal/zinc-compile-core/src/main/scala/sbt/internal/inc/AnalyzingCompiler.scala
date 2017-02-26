@@ -57,7 +57,7 @@ final class AnalyzingCompiler(
     )
 
   def withClassLoaderCache(classLoaderCache: ClassLoaderCache) =
-    new AnalyzingCompiler(scalaInstance, provider, classpathOptions, onArgsF, Some(classLoaderCache))
+    new AnalyzingCompiler(scalaInstance, provider, classpathOptions, onArgsHandler, Some(classLoaderCache))
 
   def apply(sources: Array[File], changes: DependencyChanges, classpath: Array[File], singleOutput: File, options: Array[String], callback: AnalysisCallback, maximumErrors: Int, cache: GlobalsCache, log: Logger): Unit =
     {
@@ -65,34 +65,6 @@ final class AnalyzingCompiler(
       val output = CompileOutput(singleOutput)
       compile(sources, changes, arguments.toArray, output, callback, new LoggerReporter(maximumErrors, log, p => p), cache, log, Maybe.nothing[CompileProgress])
     }
-
-  def apply(
-    sources: Array[File],
-    changes: DependencyChanges,
-    classpath: Array[File],
-    singleOutput: File,
-    options: Array[String],
-    callback: AnalysisCallback,
-    maximumErrors: Int,
-    cache: GlobalsCache,
-    log: Logger
-  ): Unit = {
-    val compArgs = new CompilerArguments(scalaInstance, classpathOptions)
-    val arguments = compArgs(Nil, classpath, None, options)
-    val output = CompileOutput(singleOutput)
-    val reporter = new LoggerReporter(maximumErrors, log, p => p)
-    compile(
-      sources,
-      changes,
-      arguments.toArray,
-      output,
-      callback,
-      reporter,
-      cache,
-      log,
-      Maybe.nothing[CompileProgress]
-    )
-  }
 
   def compile(
     sources: Array[File],
@@ -164,7 +136,7 @@ final class AnalyzingCompiler(
   def doc(sources: Seq[File], classpath: Seq[File], outputDirectory: File, options: Seq[String], log: Logger, reporter: Reporter): Unit =
     {
       val arguments = (new CompilerArguments(scalaInstance, classpathOptions))(sources, classpath, Some(outputDirectory), options)
-      onArgsF(arguments)
+      onArgsHandler(arguments)
       call("xsbt.ScaladocInterface", "run", log)(classOf[Array[String]], classOf[xLogger], classOf[Reporter])(
         arguments.toArray[String]: Array[String], log, reporter
       )
@@ -172,7 +144,7 @@ final class AnalyzingCompiler(
     }
   def console(classpath: Seq[File], options: Seq[String], initialCommands: String, cleanupCommands: String, log: Logger)(loader: Option[ClassLoader] = None, bindings: Seq[(String, Any)] = Nil): Unit =
     {
-      onArgsF(consoleCommandArguments(classpath, options, log))
+      onArgsHandler(consoleCommandArguments(classpath, options, log))
       val (classpathString, bootClasspath) = consoleClasspaths(classpath)
       val (names, values) = bindings.unzip
       call("xsbt.ConsoleInterface", "run", log)(

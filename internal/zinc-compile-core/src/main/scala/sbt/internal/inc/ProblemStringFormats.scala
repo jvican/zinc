@@ -1,4 +1,4 @@
-package sbt
+/*package sbt
 package internal
 package inc
 
@@ -29,4 +29,4 @@ trait ProblemStringFormats {
           } else Vector(line1)
       }
   }
-}
+}*/

@@ -22,7 +22,6 @@ import scala.collection.mutable
 import LoggerReporter._
 import sbt.util.Logger
 import Logger.{ m2o, o2m, position, problem }
-import sbt.util.InterfaceUtil.{ jo2o, problem }
 import Severity.{ Error, Warn, Info => SInfo }
 
 object LoggerReporter {
