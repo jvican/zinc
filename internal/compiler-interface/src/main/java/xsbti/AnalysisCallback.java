@@ -39,14 +39,12 @@ public interface AnalysisCallback {
 
     /**
      * Indicate that the class <code>fromClassName</code> depends on a class
-     * named <code>onBinaryClassName</code> coming from class or jar file
-     * <code>binary</code>.
+     * named <code>onBinaryClassName</code> coming from class file or jar
+     * <code>onBinaryEntry</code>.
      *
-     * @param onBinary Binary name being depended on.
-     *                 Binary name with JVM-like representation. Inner classes
-     *                 are represented with '$'. For more information on the
-     *                 binary name format, check section 13.1 of the Java
-     *                 Language Specification.
+     * @param onBinaryEntry A binary entry represents either the jar or the
+     *                      concrete class file from which the Scala compiler
+     *                      knows that <code>onBinaryClassName</code> comes from.
      * @param onBinaryClassName Dependent binary name.
      *                 Binary name with JVM-like representation. Inner classes
      *                 are represented with '$'. For more information on the
@@ -65,7 +63,7 @@ public interface AnalysisCallback {
      *
      * @see xsbti.api.DependencyContext for more information on the context.
      */
-    void binaryDependency(File onBinary,
+    void binaryDependency(File onBinaryEntry,
                           String onBinaryClassName,
                           String fromClassName,
                           File fromSourceFile,
@@ -136,26 +134,6 @@ public interface AnalysisCallback {
                  String msg,
                  Severity severity,
                  boolean reported);
-
-    /**
-     * Determine whether method calls through this interface should be
-     * interpreted to use the name-hashing algorithm in the given compiler run.
-     *
-     *
-     * In particular, it indicates whether member references, inheritance
-     * dependencies and local inherited dependencies should be extracted.
-     *
-     * @see xsbti.api.DependencyContext for more information on the sort of
-     * dependency that can be registered.
-     *
-     * The implementation of this method is meant to be free of side-effects.
-     * It's added to {@link AnalysisCallback} because it indicates how other
-     * callback calls should be interpreted by its implementations and clients.
-     *
-     * This method is an implementation detail and can be removed at
-     * any point without any deprecation. Do not depend on it.
-     */
-    boolean nameHashing();
 
     /**
      * Communicate to the callback that the dependency phase has finished.
