@@ -65,6 +65,7 @@ object ZincCompilePlugin
         val module = ZincGroupId % BridgeId % ZincVersion % "component"
         module.sources()
       },
+      zincDebug := false,
       zincCompiledBridge := {
         val currentScala = scalaBinaryVersion.value
         if (cachedCompiledBridge == null ||
@@ -96,6 +97,7 @@ object ZincCompilePlugin
         }
 
         val version = scalaVersion.value
+        val instance = scalaInstance.value
         val analysisFilename = (compileAnalysisFilename in Compile).value
         val cacheDir = st.cacheDirectory / name.value / analysisFilename
         val bridge = zincCompiledBridge.value
@@ -106,17 +108,24 @@ object ZincCompilePlugin
         val compilationDir = (classDirectory in Compile).value
         val scalaOptions = (scalacOptions in Compile).value.toArray
         val javaOptions = (javacOptions in Compile).value.toArray
+        val enabledDebug: java.lang.Boolean = zincDebug.value
 
         // Invoke our beauty reflectively, as it's meant to be
-        cachedEntrypoint.invoke(cachedZincInstance,
-                                version,
-                                bridge,
-                                cacheDir,
-                                entries,
-                                sourceFiles,
-                                compilationDir,
-                                scalaOptions,
-                                javaOptions)
+        cachedEntrypoint.invoke(
+          cachedZincInstance,
+          version,
+          instance.compilerJar,
+          instance.libraryJar,
+          instance.extraJars.toArray,
+          bridge,
+          cacheDir,
+          entries,
+          sourceFiles,
+          compilationDir,
+          scalaOptions,
+          javaOptions,
+          enabledDebug
+        )
       }
     )
   }
@@ -134,10 +143,14 @@ trait ReflectionUtils {
       classOf[File],
       classOf[File],
       classOf[Array[File]],
+      classOf[File],
+      classOf[File],
+      classOf[Array[File]],
       classOf[Array[File]],
       classOf[File],
       classOf[Array[String]],
-      classOf[Array[String]]
+      classOf[Array[String]],
+      classOf[scala.Boolean]
     )
   }
 
@@ -230,8 +243,10 @@ trait SbtUtils { self: SbtStubs with ZincCompileKeys =>
        |
        |${y("This work is a joint effort from the Scala Center and Lightbend.")}
        |
-       |${y("Please, do file bugs here: https://github.com/sbt/zinc/issues/new.")}
-       |${y("Enable the debug setting to give as much information as possible.")}
+       |${y(
+         "Please, do file bugs here: https://github.com/sbt/zinc/issues/new.")}
+       |${y(
+         "Enable the debug setting to give as much information as possible.")}
     """.stripMargin
 
 }

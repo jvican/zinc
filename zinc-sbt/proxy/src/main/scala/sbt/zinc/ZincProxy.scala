@@ -2,89 +2,133 @@ package sbt.zinc
 
 import java.io.File
 
-import xsbti.Maybe
-import xsbti.compile.{ScalaInstance => _, _}
 import sbt.inc.BaseCompilerSpec
-import sbt.internal.inc._
+import sbt.internal.inc.{ScalaInstance => _, _}
 import sbt.internal.util.{ConsoleLogger, ConsoleOut, MainAppender, ManagedLogger}
-import sbt.util.{InterfaceUtil, Level, LogExchange}
+import sbt.util._
+import xsbti.Maybe
+import xsbti.compile._
+import sbt.io.syntax._
+import org.apache.logging.log4j.{Level => Log4Level}
 
 import scala.collection.mutable
 
 class ZincProxy extends BaseCompilerSpec with ZincUtils {
-  val MaxCompilationErrors = 100
 
-  private var cachedInstance: ScalaInstance = _
-  private val analysisMap = mutable.Map.empty[File, Analysis]
+  type AnalysisMap = mutable.Map[File, Analysis]
+  case class Cached(entryLookup: PerClasspathEntryLookup,
+                    store: AnalysisStore,
+                    compilers: Compilers) {
+    def getAll = (entryLookup, store, compilers)
+  }
+
+  private val MaxCompilationErrors = 100
+  private val cachedScalas = mutable.Map.empty[String, Cached]
   private val compilerCache = CompilerCache.fresh
-  var previousResult: PreviousResult = _
+  val ClasspathOptions = ClasspathOptionsUtil.boot
+
+  // The incremental compiler implementation is stateless
+  private val inc = new IncrementalCompilerImpl
+  import inc.{setup => Setup, inputs => Inputs}
 
   /**
-    * Run the magic of the Zinc compiler.
+    * Run the magic Zinc compiler.
     *
     * @param scalaVersion The Scala version to compile against.
+    * @param compilerJar The compiler jar for creating the scala instnace.
+    * @param stdLibraryJar The library jar for creating the scala instance.
+    * @param extras The extras of the the scala instance.
     * @param compiledBridge The bridge of the scala version already compiled.
     * @param cacheDir The directory where incremental compilation is stored.
+    * @param classpath The compilation classpath.
+    * @param sources The source files to be compiled.
+    * @param classDirectory The target class directory.
+    * @param scalacOptions The scalac options.
+    * @param javacOptions The javacOptions
     */
   def run(scalaVersion: String,
+          compilerJar: File,
+          stdLibraryJar: File,
+          extras: Array[File],
           compiledBridge: File,
           cacheDir: File,
           classpath: Array[File],
           sources: Array[File],
           classDirectory: File,
           scalacOptions: Array[String],
-          javacOptions: Array[String]) = {
+          javacOptions: Array[String],
+          debug: Boolean) = {
 
-    cachedInstance = scalaInstance(scalaVersion)
-      .asInstanceOf[sbt.internal.inc.ScalaInstance]
-    logger.info("Created Scala instance.")
-    val compiler = scalaCompiler(cachedInstance, compiledBridge)
-    logger.info(s"Created Scala compiler from bridge $compiledBridge.")
-    val incremental = new IncrementalCompilerImpl
-    val options = ClasspathOptionsUtil.boot
-    val compilers = incremental.compilers(cachedInstance, options, None, compiler)
+    if (debug) {
+      logger.setLevel(Level.Debug)
+      LogExchange.loggerConfig(loggerName).setLevel(Log4Level.DEBUG)
+    }
 
-    if (analysisMap.isEmpty)
-      analysisMap ++= classpath.map(_ -> Analysis.empty)
-    val entryLookup = ZincLookup(analysisMap.get)
-    val defaultOptions = IncOptionsUtil.defaultIncOptions()
-    val reporter = new LoggerReporter(maxErrors, managedLogger, identity)
+    logger.info("Starting to fetch")
+    val hitOrMiss = cachedScalas.get(scalaVersion)
+    val cached: Cached = {
+      if (hitOrMiss.isEmpty) {
+        val instance = scalaInstance(compilerJar, stdLibraryJar, extras.toList)
+        logger.info("Created Scala instance.")
+        val compiler = scalaCompiler(instance, compiledBridge)
+        logger.info(s"Created Scala compiler from bridge $compiledBridge.")
+        val comps = inc.compilers(instance, ClasspathOptions, None, compiler)
+        val cacheFile = cacheDir / "inc_compile.zip"
+        val store = AnalysisStore.cached(FileBasedStore(cacheFile))
+        val analysisMap = classpath.map(_ -> Analysis.empty).toMap
+        val entryLookup = ZincLookup(analysisMap.get)
+        val cached = Cached(entryLookup, store, comps)
+        cachedScalas += scalaVersion -> cached
+        cached
+      } else hitOrMiss.get
+    }
 
-    val setup = incremental.setup(entryLookup,
-                                  skip = false,
-                                  cacheDir,
-                                  compilerCache,
-                                  defaultOptions,
-                                  reporter,
-                                  None,
-                                  Array())
-    val previous =
-      if (previousResult != null) previousResult
-      else incremental.emptyPreviousResult
-    val inputs = incremental.inputs(classpath,
-                                    sources,
-                                    classDirectory,
-                                    scalacOptions,
-                                    javacOptions,
-                                    MaxCompilationErrors,
-                                    Array(),
-                                    CompileOrder.Mixed,
-                                    compilers,
-                                    setup,
-                                    previous)
+    // TODO(jvican): Support user-defined incremental options
+    val opts = IncOptionsUtil.defaultIncOptions()
+    val rlog = new LoggerReporter(maxErrors, managedLogger, identity)
+    val (lookup, store, compilers) = cached.getAll
+    val lastResult = getLastResult(store)
+
+    val setup =
+      Setup(lookup, false, cacheDir, compilerCache, opts, rlog, None, Array())
+
+    // TODO(jvican): Support user-defined compilation order
+    val order = CompileOrder.Mixed
+    val compileOptions = new CompileOptions(classpath,
+                                            sources,
+                                            classDirectory,
+                                            scalacOptions,
+                                            javacOptions,
+                                            MaxCompilationErrors,
+                                            InterfaceUtil.f1(identity),
+                                            order)
+
+    val sep = "\n  >"
     logger.info("Starting incremental compilation with Zinc 1.0.")
-    logger.info(s"> Classpath: ${classpath.mkString(",")}")
-    incremental.compile(inputs, logger)
+    logger.info(s"Classpath: ${classpath.mkString(sep, sep, sep)}")
+    val inputs = Inputs(compileOptions, compilers, setup, lastResult)
+    val result = inc.compile(inputs, logger)
+    store.set(result.analysis(), result.setup())
+  }
+
+  private def getLastResult(analysisStore: AnalysisStore): PreviousResult = {
+    analysisStore.get() match {
+      case Some((prevAnalysis, prevSetup)) =>
+        new PreviousResult(Maybe.just[CompileAnalysis](prevAnalysis),
+                           Maybe.just[MiniSetup](prevSetup))
+      case _ =>
+        inc.emptyPreviousResult
+    }
   }
 }
 
 trait ZincUtils {
-  val logger = ConsoleLogger()
+  val logger: AbstractLogger = ConsoleLogger()
 
+  val loggerName = s"test-zinc-${getClass.hashCode()}"
   val managedLogger: ManagedLogger = {
     val console = ConsoleOut.systemOut
     val consoleAppender = MainAppender.defaultScreen(console)
-    val loggerName = s"test-zinc-${getClass.hashCode()}"
     val x = LogExchange.logger(loggerName)
     LogExchange.unbindLoggerAppenders(loggerName)
     LogExchange.bindLoggerAppenders(loggerName,
