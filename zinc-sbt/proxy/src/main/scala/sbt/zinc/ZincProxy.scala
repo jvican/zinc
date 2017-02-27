@@ -57,6 +57,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
           classDirectory: File,
           scalacOptions: Array[String],
           javacOptions: Array[String],
+          compilationOrderString: String,
           debug: Boolean) = {
 
     if (debug) {
@@ -92,8 +93,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
     val setup =
       Setup(lookup, false, cacheDir, compilerCache, opts, rlog, None, Array())
 
-    // TODO(jvican): Support user-defined compilation order
-    val order = CompileOrder.Mixed
+    val order = parseCompilationOrder(compilationOrderString)
     val compileOptions = new CompileOptions(classpath,
                                             sources,
                                             classDirectory,
@@ -109,6 +109,14 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
     val inputs = Inputs(compileOptions, compilers, setup, lastResult)
     val result = inc.compile(inputs, logger)
     store.set(result.analysis(), result.setup())
+  }
+
+  private def parseCompilationOrder(order: String): CompileOrder = {
+    order.toLowerCase match {
+      case "mixed" => CompileOrder.Mixed
+      case "javathenscala" => CompileOrder.JavaThenScala
+      case "scalathenjava" => CompileOrder.ScalaThenJava
+    }
   }
 
   private def getLastResult(analysisStore: AnalysisStore): PreviousResult = {

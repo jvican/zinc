@@ -110,6 +110,14 @@ object ZincCompilePlugin
         val javaOptions = (javacOptions in Compile).value.toArray
         val enabledDebug: java.lang.Boolean = zincDebug.value
 
+        val order = {
+          compileOrder.value match {
+            case CompileOrder.Mixed => "mixed"
+            case CompileOrder.ScalaThenJava => "scalathenjava"
+            case CompileOrder.JavaThenScala => "javathenscala"
+          }
+        }
+
         // Invoke our beauty reflectively, as it's meant to be
         cachedEntrypoint.invoke(
           cachedZincInstance,
@@ -124,6 +132,7 @@ object ZincCompilePlugin
           compilationDir,
           scalaOptions,
           javaOptions,
+          order,
           enabledDebug
         )
       }
@@ -150,6 +159,7 @@ trait ReflectionUtils {
       classOf[File],
       classOf[Array[String]],
       classOf[Array[String]],
+      classOf[String],
       classOf[scala.Boolean]
     )
   }
