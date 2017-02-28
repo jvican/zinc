@@ -65,7 +65,6 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
       LogExchange.loggerConfig(loggerName).setLevel(Log4Level.DEBUG)
     }
 
-    logger.info("Starting to fetch")
     val hitOrMiss = cachedScalas.get(scalaVersion)
     val cached: Cached = {
       if (hitOrMiss.isEmpty) {
@@ -105,7 +104,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
 
     val sep = "\n  >"
     logger.info("Starting incremental compilation with Zinc 1.0.")
-    logger.info(s"Classpath: ${classpath.mkString(sep, sep, sep)}")
+    logger.debug(s"Classpath: ${classpath.mkString(sep, sep, sep)}")
     val inputs = Inputs(compileOptions, compilers, setup, lastResult)
     val result = inc.compile(inputs, logger)
     store.set(result.analysis(), result.setup())
