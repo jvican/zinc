@@ -149,7 +149,7 @@ def sbtToolingPath = file("zinc-sbt")
 lazy val zincSbtPlugin = (project in sbtToolingPath / "sbt-plugin").
   disablePlugins(SbtScalariform).
   settings(
-    name := "zinc-sbt-plugin",
+    name := "sbt-zinc-plugin",
     scalaVersion := "2.10.6",
     crossScalaVersions := Seq("2.10.6"),
     libraryDependencies += "com.lihaoyi" %% "fansi" % "0.2.3",
