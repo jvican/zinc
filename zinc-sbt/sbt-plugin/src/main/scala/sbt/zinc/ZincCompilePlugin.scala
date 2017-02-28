@@ -99,13 +99,13 @@ object ZincCompilePlugin
         val version = scalaVersion.value
         val instance = scalaInstance.value
         val analysisFilename = (compileAnalysisFilename in Compile).value
-        val cacheDir = st.cacheDirectory / name.value / analysisFilename
+        val cacheFile = st.cacheDirectory / name.value / analysisFilename
         val bridge = zincCompiledBridge.value
         val classpath = (dependencyClasspath in Compile).value
 
         val sourceFiles = (sources in Compile).value.toArray
         val entries = classpath.map(_.data).toArray
-        val compilationDir = (classDirectory in Compile).value
+        val compilationDir = (classDirectory in Compile).value / "zinc-1.0"
         val scalaOptions = (scalacOptions in Compile).value.toArray
         val javaOptions = (javacOptions in Compile).value.toArray
         val enabledDebug: java.lang.Boolean = zincDebug.value
@@ -126,7 +126,7 @@ object ZincCompilePlugin
           instance.libraryJar,
           instance.extraJars.toArray,
           bridge,
-          cacheDir,
+          cacheFile,
           entries,
           sourceFiles,
           compilationDir,

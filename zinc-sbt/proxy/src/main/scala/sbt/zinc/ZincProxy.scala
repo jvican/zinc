@@ -39,8 +39,8 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
     * @param stdLibraryJar The library jar for creating the scala instance.
     * @param extras The extras of the the scala instance.
     * @param compiledBridge The bridge of the scala version already compiled.
-    * @param cacheDir The directory where incremental compilation is stored.
-    * @param classpath The compilation classpath.
+    * @param cacheFile The directory where incremental compilation is stored.
+    * @param classpath0 The compilation classpath from `dependencyClasspath`.
     * @param sources The source files to be compiled.
     * @param classDirectory The target class directory.
     * @param scalacOptions The scalac options.
@@ -51,8 +51,8 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
           stdLibraryJar: File,
           extras: Array[File],
           compiledBridge: File,
-          cacheDir: File,
-          classpath: Array[File],
+          cacheFile: File,
+          classpath0: Array[File],
           sources: Array[File],
           classDirectory: File,
           scalacOptions: Array[String],
@@ -65,6 +65,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
       LogExchange.loggerConfig(loggerName).setLevel(Log4Level.DEBUG)
     }
 
+    val classpath = Array(classDirectory) ++ classpath0
     val hitOrMiss = cachedScalas.get(scalaVersion)
     val cached: Cached = {
       if (hitOrMiss.isEmpty) {
@@ -73,9 +74,8 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
         val compiler = scalaCompiler(instance, compiledBridge)
         logger.info(s"Created Scala compiler from bridge $compiledBridge.")
         val comps = inc.compilers(instance, ClasspathOptions, None, compiler)
-        val cacheFile = cacheDir / "inc_compile.zip"
         val store = AnalysisStore.cached(FileBasedStore(cacheFile))
-        val analysisMap = classpath.map(_ -> Analysis.empty).toMap
+        val analysisMap = classpath0.map(_ -> Analysis.empty).toMap
         val entryLookup = ZincLookup(analysisMap.get)
         val cached = Cached(entryLookup, store, comps)
         cachedScalas += scalaVersion -> cached
@@ -90,7 +90,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
     val lastResult = getLastResult(store)
 
     val setup =
-      Setup(lookup, false, cacheDir, compilerCache, opts, rlog, None, Array())
+      Setup(lookup, false, cacheFile, compilerCache, opts, rlog, None, Array())
 
     val order = parseCompilationOrder(compilationOrderString)
     val compileOptions = new CompileOptions(classpath,
@@ -104,6 +104,7 @@ class ZincProxy extends BaseCompilerSpec with ZincUtils {
 
     val sep = "\n  >"
     logger.info("Starting incremental compilation with Zinc 1.0.")
+    logger.debug(s"Class files go to: $classDirectory")
     logger.debug(s"Classpath: ${classpath.mkString(sep, sep, sep)}")
     val inputs = Inputs(compileOptions, compilers, setup, lastResult)
     val result = inc.compile(inputs, logger)
