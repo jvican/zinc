@@ -32,7 +32,7 @@ The current status of the plugin is precarious and it only supports `compile`.
 This means that it reuses the current sbt compiler for several tasks, like
 compiling dependent subprojects before executing `zincCompile`.
 
-However, there are some tips that you need to know in order to compare numbers
+This situation will soon change. However, until then, here are some tips that you need to know in order to compare numbers
 between Zinc 1.0 and Zinc 0.13.13:
   
 * Make sure that you have not compiled anything before in the same session,
@@ -46,7 +46,7 @@ between Zinc 1.0 and Zinc 0.13.13:
 # File bugs
 
 One of the reasons why we release this plugin is to battle-test Zinc 1.0 before
-a stable release. Please, help us improve current Zinc by mixing well-documented
+a stable release. Please, help us improve current Zinc by filing well-documented
 issues in the official [Zinc repository](https://github.com/sbt/zinc). If you
 happen to have a problem with this plugin, file issues here.
 
