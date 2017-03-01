@@ -1,1 +1,1 @@
-addSbtPlugin("org.scala-sbt" % "zinc-sbt-plugin" % sys.props("plugin.version"))
+addSbtPlugin("org.scala-sbt" % "sbt-zinc-plugin" % sys.props("plugin.version"))

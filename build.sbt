@@ -4,7 +4,7 @@ import Dependencies._
 // import StringUtilities.normalize
 import com.typesafe.tools.mima.core._, ProblemFilters._
 
-def baseVersion = "1.0.0-X9-SNAPSHOT"
+def baseVersion = "1.0.0-X10"
 def internalPath   = file("internal")
 
 lazy val compilerBridgeScalaVersions = Seq(scala212, scala211, scala210)
@@ -141,22 +141,34 @@ lazy val zinc = (project in file("zinc")).
     zincTesting % Test).
   configure(addBaseSettingsAndTestDeps).
   settings(
-    name := "zinc"
+    name := "zinc",
+    publishArtifact in Test := true
   )
 
 def sbtToolingPath = file("zinc-sbt")
 
+lazy val publishSbt13Settings = Seq(
+  publishArtifact in Test := true,
+  bintrayOrganization := Some("scalacenter"),
+  publishTo := (publishTo in bintray).value,
+  resolvers += Resolver.bintrayRepo("scalacenter", "releases"),
+  resolvers += Resolver.bintrayRepo("scalacenter", "sbt-releases")
+)
+
 lazy val zincSbtPlugin = (project in sbtToolingPath / "sbt-plugin").
   disablePlugins(SbtScalariform).
+  settings(publishSbt13Settings).
   settings(
     name := "sbt-zinc-plugin",
-    scalaVersion := "2.10.6",
-    crossScalaVersions := Seq("2.10.6"),
+    scalaVersion := "2.10.5",
+    crossScalaVersions := Seq("2.10.5"),
     libraryDependencies += "com.lihaoyi" %% "fansi" % "0.2.3",
     sbt.ScriptedPlugin.scriptedSettings,
     sources in (Compile, doc) := Seq.empty,
     publishArtifact in (Compile, packageDoc) := false,
+    bintrayRepository := "sbt-releases",
     sbtPlugin := true,
+    publishMavenStyle := false,
     scalacOptions := Seq(),
     scriptedLaunchOpts ++= Seq(
       s"-Dplugin.version=${version.value}",
@@ -172,16 +184,15 @@ addCommandAlias("runTestsPlugin", ";+zincSbtProxy/publishLocal;so zincSbtPlugin/
 lazy val zincSbtProxy = (project in sbtToolingPath / "proxy").
   dependsOn(zincCompileCore, zincCore, zinc % "compile->test").
   disablePlugins(SbtScalariform).
+  settings(publishSbt13Settings).
   configure(addBaseSettingsAndTestDeps).
   settings(
     name := "zinc-sbt-proxy",
+    bintrayRepository := "releases",
+    publishArtifact in Test := true,
     assemblyJarName in assembly :=
       name.value + "_" + scalaVersion.value + "-" + version.value + "-assembly.jar",
     test in assembly := {},
-/*    assemblyMergeStrategy in assembly := {
-      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
-      case x => MergeStrategy.first
-    },*/
     packagedArtifact in Compile in packageBin := {
       val temp = (packagedArtifact in Compile in packageBin).value
       val (art, slimJar) = temp

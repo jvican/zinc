@@ -178,7 +178,7 @@ trait SbtUtils { self: SbtStubs with ZincCompileKeys =>
   protected val Version = "2\\.(\\d\\d)\\..*".r
   protected val ZincArtifactName = "zinc-sbt-proxy"
   protected val ZincGroupId = "org.scala-sbt"
-  protected val ZincVersion = "1.0.0-X9-SNAPSHOT"
+  protected val ZincVersion = "1.0.0-X10"
 
   private def failedResolution(report: UpdateReport) =
     s"Unable to resolve the Zinc proxy: $report"
@@ -203,7 +203,8 @@ trait SbtUtils { self: SbtStubs with ZincCompileKeys =>
         // remove injected dependencies from random sbt plugins.
         libraryDependencies := Nil,
         libraryDependencies +=
-          (ZincGroupId %% ZincArtifactName % zincVersion).intransitive()
+          (ZincGroupId %% ZincArtifactName % zincVersion).intransitive(),
+        resolvers += Resolver.bintrayRepo("scalacenter", "releases")
       )
   }
 
