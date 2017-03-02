@@ -23,6 +23,9 @@ therefore the Zinc version is hardcoded into the code.
 
 To compile your project with Zinc 1.0, run `zincCompile`.
 
+**This plugin does not support Zinc 1.0 compilation of 2.10 Scala projects**.
+We welcome contributions on supporting 2.10 projects.
+
 In complex setups, there may be some problems with caching. In the next days,
 we will improve these situations.
 
