@@ -1,6 +1,8 @@
 Zinc
 ====
 
+**This is Scala Center's fork of the Zinc incremental compiler**.
+
 Zinc is the incremental compiler for Scala. Most Scala developers use it daily
 without noticing -- it's embedded in key build tools like sbt, CBT and pants.
 
