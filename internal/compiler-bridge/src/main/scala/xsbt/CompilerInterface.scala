@@ -158,6 +158,19 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
   val compiler: Compiler = newCompiler
   class Compiler extends CallbackGlobal(command.settings, dreporter, output) {
     object dummy // temporary fix for #4426
+
+    object positionSniffer extends {
+      val global: Compiler.this.type = Compiler.this
+      val phaseName = PositionSniffer.name
+      val runsAfter = List("parser")
+      override val runsBefore = List("namer")
+      val runsRightAfter = None
+    } with SubComponent {
+      val sniffer = new PositionSniffer(global)
+      def newPhase(prev: Phase) = sniffer.newPhase(prev)
+      def name = phaseName
+    }
+
     object sbtAnalyzer extends {
       val global: Compiler.this.type = Compiler.this
       val phaseName = Analyzer.name
@@ -209,6 +222,7 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
 
     override lazy val phaseDescriptors =
       {
+        phasesSet += positionSniffer
         phasesSet += sbtAnalyzer
         if (callback.enabled()) {
           phasesSet += sbtDependency
