@@ -9,11 +9,15 @@ package xsbt
 
 import xsbti.{ AnalysisCallback, Logger, Problem, Reporter, Severity }
 import xsbti.compile._
-import scala.tools.nsc.{ io, reporters, Phase, Global, Settings, SubComponent }
+
+import scala.tools.nsc.{ Global, Phase, Settings, SubComponent, io, reporters }
 import io.AbstractFile
 import scala.collection.mutable
 import Log.debug
 import java.io.File
+import java.lang.invoke.MethodHandles
+
+import scala.reflect.api.Trees
 
 final class CompilerInterface {
   def newCompiler(options: Array[String], output: Output, initialLog: Logger, initialDelegate: Reporter, resident: Boolean): CachedCompiler =
@@ -29,19 +33,224 @@ sealed trait GlobalCompat { self: Global =>
     def informUnitStarting(phase: Phase, unit: CompilationUnit): Unit = ()
   }
 }
-sealed abstract class CallbackGlobal(settings: Settings, reporter: reporters.Reporter, output: Output) extends Global(settings, reporter) with GlobalCompat {
+
+sealed abstract class CallbackGlobal(
+  settings: Settings,
+  reporter: reporters.Reporter,
+  output: Output
+) extends Global(settings, reporter) with GlobalCompat { self =>
+
   def callback: AnalysisCallback
   def findClass(name: String): Option[(AbstractFile, Boolean)]
+
   lazy val outputDirs: Iterable[File] = {
     output match {
       case single: SingleOutput  => List(single.outputDirectory)
       case multi: MultipleOutput => multi.outputGroups.toStream map (_.outputDirectory)
     }
   }
+
+  /**
+   * Wraps an underlying tree copier forwarding to him all the operations
+   * implemented by the [[TreeCopier]] interface. Its main goal is to enrich
+   * some key operations that are invoked by [[scala.tools.nsc.typechecker.Typers]]
+   * to perform desugarings and tree transformations.
+   *
+   * All the effects performed in the tree copier must hold one property:
+   * idempotency -- wrapping the tree copier twice should not duplicate its
+   * functionality. This is commonly checked by confirming the effect has
+   * already been applied.
+   *
+   * @param wrapped The underlying tree copier performing tree copies.
+   */
+  private final class HijackedTreeCopier(wrapped: TreeCopier) extends TreeCopier {
+    def DocDef(tree: Tree, comment: DocComment, definition: Tree): DocDef =
+      wrapped.DocDef(tree, comment, definition)
+
+    def SelectFromArray(tree: Tree, qualifier: Tree, selector: Name, erasure: Type): SelectFromArray =
+      wrapped.SelectFromArray(tree, qualifier, selector, erasure)
+
+    def InjectDerivedValue(tree: Tree, arg: Tree): InjectDerivedValue =
+      wrapped.InjectDerivedValue(tree, arg)
+
+    def TypeTreeWithDeferredRefCheck(tree: Tree): TypeTreeWithDeferredRefCheck =
+      wrapped.TypeTreeWithDeferredRefCheck(tree)
+
+    def ApplyDynamic(tree: Tree, qual: Tree, args: List[Tree]): ApplyDynamic =
+      wrapped.ApplyDynamic(tree, qual, args)
+
+    def ArrayValue(tree: Tree, elemtpt: Tree, trees: List[Tree]): ArrayValue =
+      wrapped.ArrayValue(tree, elemtpt, trees)
+
+    override def ClassDef(tree: Tree, mods: Modifiers, name: Name, tparams: List[TypeDef], impl: Template): ClassDef =
+      wrapped.ClassDef(tree, mods, name, tparams, impl)
+
+    override def PackageDef(tree: Tree, pid: RefTree, stats: List[Tree]): PackageDef =
+      wrapped.PackageDef(tree, pid, stats)
+
+    override def ModuleDef(tree: Tree, mods: Modifiers, name: Name, impl: Template): ModuleDef =
+      wrapped.ModuleDef(tree, mods, name, impl)
+
+    override def ValDef(tree: Tree, mods: Modifiers, name: Name, tpt: Tree, rhs: Tree): ValDef =
+      wrapped.ValDef(tree, mods, name, tpt, rhs)
+
+    override def DefDef(tree: Tree, mods: Modifiers, name: Name, tparams: List[TypeDef], vparamss: List[List[ValDef]], tpt: Tree, rhs: Tree): DefDef =
+      wrapped.DefDef(tree, mods, name, tparams, vparamss, tpt, rhs)
+
+    override def TypeDef(tree: Tree, mods: Modifiers, name: Name, tparams: List[TypeDef], rhs: Tree): TypeDef =
+      wrapped.TypeDef(tree, mods, name, tparams, rhs)
+
+    override def LabelDef(tree: Tree, name: Name, params: List[Ident], rhs: Tree): LabelDef =
+      wrapped.LabelDef(tree, name, params, rhs)
+
+    override def Import(tree: Tree, expr: Tree, selectors: List[ImportSelector]): Import =
+      wrapped.Import(tree, expr, selectors)
+
+    override def Template(tree: Tree, parents: List[Tree], self: ValDef, body: List[Tree]): Template =
+      wrapped.Template(tree, parents, self, body)
+
+    override def Block(tree: Tree, stats: List[Tree], expr: Tree): Block =
+      wrapped.Block(tree, stats, expr)
+
+    override def CaseDef(tree: Tree, pat: Tree, guard: Tree, body: Tree): CaseDef =
+      wrapped.CaseDef(tree, pat, guard, body)
+
+    override def Alternative(tree: Tree, trees: List[Tree]): Alternative =
+      wrapped.Alternative(tree, trees)
+
+    override def Star(tree: Tree, elem: Tree): Star =
+      wrapped.Star(tree, elem)
+
+    override def Bind(tree: Tree, name: Name, body: Tree): Bind =
+      wrapped.Bind(tree, name, body)
+
+    override def UnApply(tree: Tree, fun: Tree, args: List[Tree]): UnApply =
+      wrapped.UnApply(tree, fun, args)
+
+    override def Function(tree: Tree, vparams: List[ValDef], body: Tree): Function =
+      wrapped.Function(tree, vparams, body)
+
+    override def Assign(tree: Tree, lhs: Tree, rhs: Tree): Assign =
+      wrapped.Assign(tree, lhs, rhs)
+
+    override def AssignOrNamedArg(tree: Tree, lhs: Tree, rhs: Tree): AssignOrNamedArg =
+      wrapped.AssignOrNamedArg(tree, lhs, rhs)
+
+    override def If(tree: Tree, cond: Tree, thenp: Tree, elsep: Tree): If =
+      wrapped.If(tree, cond, thenp, elsep)
+
+    override def Match(tree: Tree, selector: Tree, cases: List[CaseDef]): Match =
+      wrapped.Match(tree, selector, cases)
+
+    override def Return(tree: Tree, expr: Tree): Return =
+      wrapped.Return(tree, expr)
+
+    override def Try(tree: Tree, block: Tree, catches: List[CaseDef], finalizer: Tree): Try =
+      wrapped.Try(tree, block, catches, finalizer)
+
+    override def Throw(tree: Tree, expr: Tree): Throw =
+      wrapped.Throw(tree, expr)
+
+    override def New(tree: Tree, tpt: Tree): New =
+      wrapped.New(tree, tpt)
+
+    override def Typed(tree: Tree, expr: Tree, tpt: Tree): Typed =
+      wrapped.Typed(tree, expr, tpt)
+
+    override def TypeApply(tree: Tree, fun: Tree, args: List[Tree]): TypeApply =
+      wrapped.TypeApply(tree, fun, args)
+
+    override def Apply(tree: Tree, fun: Tree, args: List[Tree]): Apply =
+      wrapped.Apply(tree, fun, args)
+
+    override def Super(tree: Tree, qual: Tree, mix: TypeName): Super =
+      wrapped.Super(tree, qual, mix)
+
+    override def This(tree: Tree, qual: Name): This =
+      wrapped.This(tree, qual)
+
+    override def Select(tree: Tree, qualifier: Tree, selector: Name): Select =
+      wrapped.Select(tree, qualifier, selector)
+
+    override def Ident(tree: Tree, name: Name): Ident =
+      wrapped.Ident(tree, name)
+
+    override def RefTree(tree: Tree, qualifier: Tree, selector: Name): RefTree =
+      wrapped.RefTree(tree, qualifier, selector)
+
+    override def ReferenceToBoxed(tree: Tree, idt: Ident): ReferenceToBoxed =
+      wrapped.ReferenceToBoxed(tree, idt)
+
+    override def Literal(tree: Tree, value: Constant): Literal = {
+      val result = wrapped.Literal(tree, value)
+      tree match {
+        case l: Literal =>
+          println(s"REPLACING ${l.value} by $value")
+        case _ =>
+      }
+      result
+    }
+
+    override def TypeTree(tree: Tree): TypeTree =
+      wrapped.TypeTree(tree)
+
+    override def Annotated(tree: Tree, annot: Tree, arg: Tree): Annotated =
+      wrapped.Annotated(tree, annot, arg)
+
+    override def SingletonTypeTree(tree: Tree, ref: Tree): SingletonTypeTree =
+      wrapped.SingletonTypeTree(tree, ref)
+
+    override def SelectFromTypeTree(tree: Tree, qualifier: Tree, selector: Name): SelectFromTypeTree =
+      wrapped.SelectFromTypeTree(tree, qualifier, selector)
+
+    override def CompoundTypeTree(tree: Tree, templ: Template): CompoundTypeTree =
+      wrapped.CompoundTypeTree(tree, templ)
+
+    override def AppliedTypeTree(tree: Tree, tpt: Tree, args: List[Tree]): AppliedTypeTree =
+      wrapped.AppliedTypeTree(tree, tpt, args)
+
+    override def TypeBoundsTree(tree: Tree, lo: Tree, hi: Tree): TypeBoundsTree =
+      wrapped.TypeBoundsTree(tree, lo, hi)
+
+    override def ExistentialTypeTree(tree: Tree, tpt: Tree, whereClauses: List[MemberDef]): ExistentialTypeTree =
+      wrapped.ExistentialTypeTree(tree, tpt, whereClauses)
+  }
+
+  val internalGlobal: Global = this.asInstanceOf[Global]
+
+  def hijackTreeCopy(): Unit = {
+    val newTreeCopy = treeCopy match {
+      case lazyCopier: LazyTreeCopier     => new HijackedTreeCopier(lazyCopier)
+      case strictCopier: StrictTreeCopier => new HijackedTreeCopier(strictCopier)
+      case hijackedCopier: HijackedTreeCopier =>
+        println("Tree copier has already been hijacked. Skipping.")
+        hijackedCopier
+      case unknownCopier: TreeCopier =>
+        val copierClazz = unknownCopier.getClass
+        println(s"Unknown tree copier $unknownCopier of class $copierClazz.")
+        println("> It could not be hijacked because it's neither lazy nor strict.")
+        unknownCopier
+    }
+
+    val lookup = MethodHandles.lookup()
+    val method = classOf[Trees].getDeclaredMethod("treeCopy")
+    method.setAccessible(true)
+    val methodHandle = lookup.unreflect(method)
+    println(methodHandle.invoke(this))
+    /*
+    import java.lang.invoke.{ MethodType => ReflectionMethodType }
+    val treeCopyTpe = ReflectionMethodType.methodType(classOf[TreeCopier])
+    val treeCopyMethod = MethodHandles.lookup().findSpecial(classOf[Global], "treeCopy", treeCopyTpe, this.getClass)
+    treeCopyMethod.invoke(this)*/
+  }
+
+  hijackTreeCopy()
+
   // sbtDependency is exposed to `localToNonLocalClass` for sanity checking
   // the lookup performed by the `localToNonLocalClass` can be done only if
   // we're running at earlier phase, e.g. an sbtDependency phase
   private[xsbt] val sbtDependency: SubComponent
+
   /*
    * A map from local classes to non-local class that contains it.
    *
