@@ -307,7 +307,8 @@ private[xsbt] object ZincBenchmark {
     ): Result[Unit] = {
       import scala.sys.process._
       val taskName = generateTaskName(sbtProject)
-      val scalaVersion = scala.util.Properties.scalaPropOrElse("version.number", "2.12.1")
+      val scalaVersion =
+        scala.util.Properties.scalaPropOrElse("version.number", "2.12.1")
       val sbt = Try(Process(s"sbt ++$scalaVersion $taskName", atDir).!).toEither
       sbt.right.flatMap { _ =>
         val buildOutputFilepath = buildOutputFile.getAbsolutePath
@@ -340,9 +341,7 @@ case class BenchmarkProject(
   private[xsbt] def cloneRepo(at: File): Result[File] = {
     val tempDir = new File(s"${at.getAbsolutePath}/$hash")
     val gitClient = Git.clone(repo, tempDir)
-    gitClient
-      .right.flatMap(Git.checkout(_, hash))
-      .right.map(_ => tempDir)
+    gitClient.right.flatMap(Git.checkout(_, hash)).right.map(_ => tempDir)
   }
 
   import ZincBenchmark.TryPimp

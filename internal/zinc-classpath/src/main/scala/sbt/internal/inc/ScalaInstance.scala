@@ -90,7 +90,11 @@ object ScalaInstance {
   def isDotty(version: String): Boolean = version.startsWith("0.")
 
   /** Create a [[ScalaInstance]] from a given org, version and launcher. */
-  def apply(org: String, version: String, launcher: xsbti.Launcher): ScalaInstance = {
+  def apply(
+    org: String,
+    version: String,
+    launcher: xsbti.Launcher
+  ): ScalaInstance = {
     /* For launcher compatibility, use overload for `ScalaOrg`. */
     if (org == ScalaOrg)
       apply(version, launcher)
@@ -132,16 +136,23 @@ object ScalaInstance {
   def apply(scalaHome: File, launcher: xsbti.Launcher): ScalaInstance =
     apply(scalaHome)(scalaLoader(launcher))
 
-  def apply(scalaHome: File)(classLoader: List[File] => ClassLoader): ScalaInstance = {
+  def apply(scalaHome: File)(
+    classLoader: List[File] => ClassLoader
+  ): ScalaInstance = {
     val all = allJars(scalaHome)
     val loader = classLoader(all.toList)
     val library = libraryJar(scalaHome)
-    val version = actualVersion(loader)(" (library jar  " + library.getAbsolutePath + ")")
+    val version =
+      actualVersion(loader)(" (library jar  " + library.getAbsolutePath + ")")
     val compiler = compilerJar(scalaHome)
     new ScalaInstance(version, loader, library, compiler, all.toArray, None)
   }
 
-  def apply(version: String, scalaHome: File, launcher: xsbti.Launcher): ScalaInstance = {
+  def apply(
+    version: String,
+    scalaHome: File,
+    launcher: xsbti.Launcher
+  ): ScalaInstance = {
     val library = libraryJar(scalaHome)
     val compiler = compilerJar(scalaHome)
     val jars = allJars(scalaHome)
@@ -169,7 +180,12 @@ object ScalaInstance {
   )(classLoader: List[File] => ClassLoader): ScalaInstance = {
     val loader = classLoader(libraryJar :: compilerJar :: extraJars.toList)
     new ScalaInstance(
-      version, loader, libraryJar, compilerJar, extraJars.toArray, explicitActual
+      version,
+      loader,
+      libraryJar,
+      compilerJar,
+      extraJars.toArray,
+      explicitActual
     )
   }
 

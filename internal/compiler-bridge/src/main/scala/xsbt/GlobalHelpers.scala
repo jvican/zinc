@@ -17,22 +17,23 @@ trait GlobalHelpers { self: Compat =>
   /** Return true if type shall be ignored, false otherwise. */
   @inline def ignoredType(tpe: Type) = {
     tpe == null ||
-      tpe == NoType ||
-      tpe.typeSymbol == EmptyPackageClass
+    tpe == NoType ||
+    tpe.typeSymbol == EmptyPackageClass
   }
 
   /** Return true if symbol shall be ignored, false otherwise. */
   @inline def ignoredSymbol(symbol: Symbol) = {
     symbol == null ||
-      symbol == NoSymbol ||
-      symbol == EmptyPackageClass
+    symbol == NoSymbol ||
+    symbol == EmptyPackageClass
   }
 
   /** Return true if name is empty, false otherwise. */
   def isEmptyName(name: Name): Boolean = {
     name match {
-      case null | nme.EMPTY | nme.EMPTY_PACKAGE_NAME |
-        tpnme.EMPTY | tpnme.EMPTY_PACKAGE_NAME => true
+      case null | nme.EMPTY | nme.EMPTY_PACKAGE_NAME | tpnme.EMPTY |
+          tpnme.EMPTY_PACKAGE_NAME =>
+        true
       case _ => false
     }
   }
@@ -64,11 +65,11 @@ trait GlobalHelpers { self: Compat =>
     protected def reinitializeVisited(): Unit = visited.clear()
 
     /**
-     * Traverse the type and its info to track all type dependencies.
-     *
-     * Note that tpe cannot be either `NoSymbol` or `null`.
-     * Check that you don't pass those types at the call-site.
-     */
+      * Traverse the type and its info to track all type dependencies.
+      *
+      * Note that tpe cannot be either `NoSymbol` or `null`.
+      * Check that you don't pass those types at the call-site.
+      */
     override def traverse(tpe: Type): Unit = {
       if ((tpe ne NoType) && !visited.contains(tpe)) {
         visited.add(tpe)

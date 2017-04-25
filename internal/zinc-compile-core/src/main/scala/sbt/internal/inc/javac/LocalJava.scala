@@ -14,12 +14,23 @@ package javac
 import java.io.{ File, OutputStream, PrintWriter, Writer }
 import javax.tools.JavaFileManager.Location
 import javax.tools.JavaFileObject.Kind
-import javax.tools.{ FileObject, ForwardingJavaFileManager, ForwardingJavaFileObject, JavaFileManager, JavaFileObject }
+import javax.tools.{
+  FileObject,
+  ForwardingJavaFileManager,
+  ForwardingJavaFileObject,
+  JavaFileManager,
+  JavaFileObject
+}
 
 import sbt.internal.util.LoggerWriter
 import sbt.util.{ Level, Logger }
 import xsbti.{ Reporter, Logger => XLogger }
-import xsbti.compile.{ ClassFileManager, IncToolOptions, JavaCompiler => XJavaCompiler, Javadoc => XJavadoc }
+import xsbti.compile.{
+  ClassFileManager,
+  IncToolOptions,
+  JavaCompiler => XJavaCompiler,
+  Javadoc => XJavadoc
+}
 
 /**
  * Define helper methods that will try to instantiate the Java toolchain
@@ -27,10 +38,12 @@ import xsbti.compile.{ ClassFileManager, IncToolOptions, JavaCompiler => XJavaCo
  * JDK versions will include different Java tool chains.
  */
 object LocalJava {
+
   /** True if we can call a forked Javadoc. */
   def hasLocalJavadoc: Boolean = javadocMethod.isDefined
 
   private[this] val javadocClass = "com.sun.tools.javadoc.Main"
+
   /** Get the javadoc execute method reflectively from current class loader. */
   private[this] def javadocMethod = {
     try {
@@ -49,6 +62,7 @@ object LocalJava {
 
   private val JavadocFailure: String =
     "Unable to reflectively invoke javadoc, class not present on the current class loader."
+
   /** A mechanism to call the javadoc tool via reflection. */
   private[javac] def unsafeJavadoc(
     args: Array[String],
@@ -70,17 +84,31 @@ object LocalJava {
 
 /** Implementation of javadoc tool which attempts to run it locally (in-class). */
 final class LocalJavadoc() extends XJavadoc {
-  override def run(sources: Array[File], options: Array[String], incToolOptions: IncToolOptions,
-    reporter: Reporter, log: XLogger): Boolean = {
+  override def run(
+    sources: Array[File],
+    options: Array[String],
+    incToolOptions: IncToolOptions,
+    reporter: Reporter,
+    log: XLogger
+  ): Boolean = {
     val cwd = new File(new File(".").getAbsolutePath).getCanonicalFile
     val nonJArgs = options.filterNot(_.startsWith("-J"))
     val allArguments = nonJArgs ++ sources.map(_.getAbsolutePath)
     val javacLogger = new JavacLogger(log, reporter, cwd)
-    val warnOrError = new PrintWriter(new ProcessLoggerWriter(javacLogger, Level.Error))
-    val infoWriter = new PrintWriter(new ProcessLoggerWriter(javacLogger, Level.Info))
+    val warnOrError = new PrintWriter(
+      new ProcessLoggerWriter(javacLogger, Level.Error)
+    )
+    val infoWriter = new PrintWriter(
+      new ProcessLoggerWriter(javacLogger, Level.Info)
+    )
     var exitCode = -1
     try {
-      exitCode = LocalJava.unsafeJavadoc(allArguments, warnOrError, warnOrError, infoWriter)
+      exitCode = LocalJava.unsafeJavadoc(
+        allArguments,
+        warnOrError,
+        warnOrError,
+        infoWriter
+      )
     } finally {
       warnOrError.close()
       infoWriter.close()
@@ -95,9 +123,15 @@ final class LocalJavadoc() extends XJavadoc {
  * Define the implementation of a Java compiler which delegates to the JVM
  * resident Java compiler.
  */
-final class LocalJavaCompiler(compiler: javax.tools.JavaCompiler) extends XJavaCompiler {
-  override def run(sources: Array[File], options: Array[String], incToolOptions: IncToolOptions,
-    reporter: Reporter, log0: XLogger): Boolean = {
+final class LocalJavaCompiler(compiler: javax.tools.JavaCompiler)
+  extends XJavaCompiler {
+  override def run(
+    sources: Array[File],
+    options: Array[String],
+    incToolOptions: IncToolOptions,
+    reporter: Reporter,
+    log0: XLogger
+  ): Boolean = {
     val log: Logger = log0
     import collection.JavaConverters._
     val logger = new LoggerWriter(log)
@@ -110,7 +144,9 @@ final class LocalJavaCompiler(compiler: javax.tools.JavaCompiler) extends XJavaC
     /* Local Java compiler doesn't accept `-J<flag>` options, strip them. */
     val (invalidOptions, cleanedOptions) = options partition (_ startsWith "-J")
     if (invalidOptions.nonEmpty) {
-      log.warn("Javac is running in 'local' mode. These flags have been removed:")
+      log.warn(
+        "Javac is running in 'local' mode. These flags have been removed:"
+      )
       log.warn(invalidOptions.mkString("\t", ", ", ""))
     }
 
@@ -123,8 +159,16 @@ final class LocalJavaCompiler(compiler: javax.tools.JavaCompiler) extends XJavaC
 
     var compileSuccess = false
     try {
-      val success = compiler.getTask(logWriter, customizedFileManager,
-        diagnostics, cleanedOptions.toList.asJava, null, jfiles).call()
+      val success = compiler
+        .getTask(
+          logWriter,
+          customizedFileManager,
+          diagnostics,
+          cleanedOptions.toList.asJava,
+          null,
+          jfiles
+        )
+        .call()
 
       /* Double check success variables for the Java compiler.
        * The local compiler may report successful compilations even though

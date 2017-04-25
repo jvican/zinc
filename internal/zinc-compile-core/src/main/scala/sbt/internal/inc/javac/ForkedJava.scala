@@ -17,14 +17,26 @@ import sbt.io.syntax._
 import sbt.io.IO
 import sbt.util.Logger
 import xsbti.{ Reporter, Logger => XLogger }
-import xsbti.compile.{ IncToolOptions, JavaCompiler => XJavaCompiler, Javadoc => XJavadoc }
+import xsbti.compile.{
+  IncToolOptions,
+  JavaCompiler => XJavaCompiler,
+  Javadoc => XJavadoc
+}
 
 import scala.sys.process.Process
 
 /** Helper methods for running the java toolchain by forking. */
 object ForkedJava {
+
   /** Helper method to launch programs. */
-  private[javac] def launch(javaHome: Option[File], program: String, sources: Seq[File], options: Seq[String], log: Logger, reporter: Reporter): Boolean = {
+  private[javac] def launch(
+    javaHome: Option[File],
+    program: String,
+    sources: Seq[File],
+    options: Seq[String],
+    log: Logger,
+    reporter: Reporter
+  ): Boolean = {
     val (jArgs, nonJArgs) = options.partition(_.startsWith("-J"))
     val allArguments = nonJArgs ++ sources.map(_.getAbsolutePath)
 
@@ -52,21 +64,23 @@ object ForkedJava {
    * @tparam T The return type.
    * @return  The result of using the argument file.
    */
-  def withArgumentFile[T](args: Seq[String])(f: File => T): T =
-    {
-      import IO.{ Newline, withTemporaryDirectory, write }
-      withTemporaryDirectory { tmp =>
-        val argFile = new File(tmp, "argfile")
-        write(argFile, args.map(escapeSpaces).mkString(Newline))
-        f(argFile)
-      }
+  def withArgumentFile[T](args: Seq[String])(f: File => T): T = {
+    import IO.{ Newline, withTemporaryDirectory, write }
+    withTemporaryDirectory { tmp =>
+      val argFile = new File(tmp, "argfile")
+      write(argFile, args.map(escapeSpaces).mkString(Newline))
+      f(argFile)
     }
+  }
   // javac's argument file seems to allow naive space escaping with quotes.  escaping a quote with a backslash does not work
   private def escapeSpaces(s: String): String = '\"' + normalizeSlash(s) + '\"'
   private def normalizeSlash(s: String) = s.replace(File.separatorChar, '/')
 
   /** create the executable name for java */
-  private[javac] def getJavaExecutable(javaHome: Option[File], name: String): String =
+  private[javac] def getJavaExecutable(
+    javaHome: Option[File],
+    name: String
+  ): String =
     javaHome match {
       case None => name
       case Some(jh) =>
@@ -77,12 +91,22 @@ object ForkedJava {
 
 /** An implementation of compiling java which forks a Javac instance. */
 final class ForkedJavaCompiler(javaHome: Option[File]) extends XJavaCompiler {
-  def run(sources: Array[File], options: Array[String], incToolOptions: IncToolOptions,
-    reporter: Reporter, log: XLogger): Boolean =
+  def run(
+    sources: Array[File],
+    options: Array[String],
+    incToolOptions: IncToolOptions,
+    reporter: Reporter,
+    log: XLogger
+  ): Boolean =
     ForkedJava.launch(javaHome, "javac", sources, options, log, reporter)
 }
 final class ForkedJavadoc(javaHome: Option[File]) extends XJavadoc {
-  def run(sources: Array[File], options: Array[String], incToolOptions: IncToolOptions,
-    reporter: Reporter, log: XLogger): Boolean =
+  def run(
+    sources: Array[File],
+    options: Array[String],
+    incToolOptions: IncToolOptions,
+    reporter: Reporter,
+    log: XLogger
+  ): Boolean =
     ForkedJava.launch(javaHome, "javadoc", sources, options, log, reporter)
 }

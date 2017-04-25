@@ -28,6 +28,7 @@ import sbt.internal.inc.{
  *
  */
 class ZincUtils extends xsbti.compile.IncrementalCompilerUtil {
+
   /**
    * Return a fully-fledged, default incremental compiler ready to use.
    */
@@ -57,7 +58,11 @@ class ZincUtils extends xsbti.compile.IncrementalCompilerUtil {
     val emptyHandler = (_: Seq[String]) => ()
     val loader = Some(new ClassLoaderCache(new URLClassLoader(Array())))
     new AnalyzingCompiler(
-      scalaInstance, bridgeProvider, classpathOptions, emptyHandler, loader
+      scalaInstance,
+      bridgeProvider,
+      classpathOptions,
+      emptyHandler,
+      loader
     )
   }
 

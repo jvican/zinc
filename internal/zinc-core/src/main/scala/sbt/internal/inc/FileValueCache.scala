@@ -17,7 +17,10 @@ sealed trait FileValueCache[T] {
   def get: File => T
 }
 
-private[this] final class FileValueCache0[T](getStamp: File => Stamp, make: File => T)(implicit equiv: Equiv[Stamp]) extends FileValueCache[T] {
+private[this] final class FileValueCache0[T](
+    getStamp: File => Stamp,
+    make: File => T)(implicit equiv: Equiv[Stamp])
+    extends FileValueCache[T] {
   private[this] val backing = new ConcurrentHashMap[File, FileCache]
 
   def clear(): Unit = backing.clear()
@@ -37,15 +40,15 @@ private[this] final class FileValueCache0[T](getStamp: File => Stamp, make: File
       }
     }
 
-    private[this] def update(stamp: Stamp): T =
-      {
-        val value = make(file)
-        stampedValue = Some((stamp, value))
-        value
-      }
+    private[this] def update(stamp: Stamp): T = {
+      val value = make(file)
+      stampedValue = Some((stamp, value))
+      value
+    }
   }
 }
 object FileValueCache {
   def apply[T](f: File => T): FileValueCache[T] = make(Stamp.lastModified)(f)
-  def make[T](stamp: File => Stamp)(f: File => T): FileValueCache[T] = new FileValueCache0[T](stamp, f)
+  def make[T](stamp: File => Stamp)(f: File => T): FileValueCache[T] =
+    new FileValueCache0[T](stamp, f)
 }

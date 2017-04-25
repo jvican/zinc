@@ -22,12 +22,12 @@ import xsbti.compile.{
 }
 
 /**
- * Define all the implicit instances that are used in the Scala implementation
- * of the incremental compiler to check the mathematical equivalence relation
- * between two given classes.
- *
- * @see scala.math.Equiv for more information on this kind of equivalence.
- */
+  * Define all the implicit instances that are used in the Scala implementation
+  * of the incremental compiler to check the mathematical equivalence relation
+  * between two given classes.
+  *
+  * @see scala.math.Equiv for more information on this kind of equivalence.
+  */
 object MiniSetupUtil {
 
   /* *********************************************************************** */
@@ -36,10 +36,9 @@ object MiniSetupUtil {
 
   /* Define first because `Equiv[CompileOrder.value]` dominates `Equiv[MiniSetup]`. */
   implicit def equivCompileSetup(
-    implicit
-    equivOutput: Equiv[APIOutput],
-    equivOpts: Equiv[MiniOptions],
-    equivComp: Equiv[String]
+      implicit equivOutput: Equiv[APIOutput],
+      equivOpts: Equiv[MiniOptions],
+      equivComp: Equiv[String]
   ): Equiv[MiniSetup] = {
     new Equiv[MiniSetup] {
       def equiv(a: MiniSetup, b: MiniSetup) = {
@@ -48,15 +47,16 @@ object MiniSetupUtil {
          * into here now, and it's borking all our results. This fixes it. */
         def sameOutput = MiniSetupUtil.equivOutput.equiv(a.output, b.output)
         def sameOptions = MiniSetupUtil.equivOpts.equiv(a.options, b.options)
-        def sameCompiler = equivComp.equiv(a.compilerVersion, b.compilerVersion)
+        def sameCompiler =
+          equivComp.equiv(a.compilerVersion, b.compilerVersion)
         def sameOrder = a.order == b.order
         def sameExtra = equivPairs.equiv(a.extra, b.extra)
 
         sameOutput &&
-          sameOptions &&
-          sameCompiler &&
-          sameOrder &&
-          sameExtra
+        sameOptions &&
+        sameCompiler &&
+        sameOrder &&
+        sameExtra
       }
     }
   }
@@ -64,15 +64,15 @@ object MiniSetupUtil {
   implicit val equivPairs: Equiv[Array[T2[String, String]]] = {
     new Equiv[Array[T2[String, String]]] {
       private def comparable(
-        a: Array[T2[String, String]]
+          a: Array[T2[String, String]]
       ): Set[(String, String)] = {
         a.filterNot(_.get1 startsWith "info.")
           .map(v => v.get1() -> v.get2())(collection.breakOut)
       }
 
       def equiv(
-        a: Array[T2[String, String]],
-        b: Array[T2[String, String]]
+          a: Array[T2[String, String]],
+          b: Array[T2[String, String]]
       ): Boolean = {
         comparable(a) == comparable(b)
       }
@@ -111,7 +111,7 @@ object MiniSetupUtil {
     new Equiv[MiniOptions] {
       def equiv(a: MiniOptions, b: MiniOptions) = {
         (a.scalacOptions sameElements b.scalacOptions) &&
-          (a.javacOptions sameElements b.javacOptions)
+        (a.javacOptions sameElements b.javacOptions)
       }
     }
   }

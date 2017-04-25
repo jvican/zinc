@@ -13,8 +13,8 @@ import scala.tools.nsc.io.AbstractFile
 import java.io.File
 
 /**
- * Contains utility methods for looking up class files corresponding to Symbols.
- */
+  * Contains utility methods for looking up class files corresponding to Symbols.
+  */
 abstract class LocateClassFile extends Compat with ClassName {
   val global: CallbackGlobal
   import global._
@@ -23,7 +23,8 @@ abstract class LocateClassFile extends Compat with ClassName {
   protected def classFile(sym: Symbol): Option[(AbstractFile, String)] =
     // package can never have a corresponding class file; this test does not
     // catch package objects (that do not have this flag set)
-    if (sym hasFlag scala.tools.nsc.symtab.Flags.PACKAGE) None else {
+    if (sym hasFlag scala.tools.nsc.symtab.Flags.PACKAGE) None
+    else {
       val file = sym.associatedFile
 
       if (file == NoAbstractFile) {
@@ -40,6 +41,13 @@ abstract class LocateClassFile extends Compat with ClassName {
       }
     }
 
-  protected def fileForClass(outputDirectory: File, s: Symbol, separatorRequired: Boolean): File =
-    new File(outputDirectory, flatclassName(s, File.separatorChar, separatorRequired) + ".class")
+  protected def fileForClass(
+      outputDirectory: File,
+      s: Symbol,
+      separatorRequired: Boolean
+  ): File =
+    new File(
+      outputDirectory,
+      flatclassName(s, File.separatorChar, separatorRequired) + ".class"
+    )
 }

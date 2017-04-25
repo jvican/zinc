@@ -15,7 +15,11 @@ import sbt.internal.inc.javac.JavaTools
 import sbt.util.InterfaceUtil
 import xsbti._
 import xsbti.compile.CompileOrder.Mixed
-import xsbti.compile.{ ClasspathOptions => XClasspathOptions, JavaTools => XJavaTools, _ }
+import xsbti.compile.{
+  ClasspathOptions => XClasspathOptions,
+  JavaTools => XJavaTools,
+  _
+}
 
 class IncrementalCompilerImpl extends IncrementalCompiler {
 
@@ -238,10 +242,23 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
         case None           => Analysis.empty
       }
       val config = MixedAnalyzingCompiler.makeConfig(
-        scalaCompiler, javaCompiler, sources, classpath, output, cache,
-        progress, scalaOptions, javaOptions, prev, previousSetup,
-        perClasspathEntryLookup, reporter, compileOrder, skip,
-        incrementalOptions, extra
+        scalaCompiler,
+        javaCompiler,
+        sources,
+        classpath,
+        output,
+        cache,
+        progress,
+        scalaOptions,
+        javaOptions,
+        prev,
+        previousSetup,
+        perClasspathEntryLookup,
+        reporter,
+        compileOrder,
+        skip,
+        incrementalOptions,
+        extra
       )
       if (skip) new CompileResult(prev, config.currentSetup, false)
       else {
@@ -285,7 +302,13 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
 
     // Run the incremental compilation
     val compile = IncrementalCompile(
-      srcsSet, lookup, mixedCompiler.compile, analysis, output, log, incOptions
+      srcsSet,
+      lookup,
+      mixedCompiler.compile,
+      analysis,
+      output,
+      log,
+      incOptions
     )
     compile.swap
   }
@@ -302,7 +325,14 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
   ): Setup = {
     val maybeProgress = InterfaceUtil.o2m(progress)
     new Setup(
-      lookup, skip, cacheFile, cache, incOptions, reporter, maybeProgress, extra
+      lookup,
+      skip,
+      cacheFile,
+      cache,
+      incOptions,
+      reporter,
+      maybeProgress,
+      extra
     )
   }
 

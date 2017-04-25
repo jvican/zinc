@@ -20,12 +20,18 @@ object FileBasedStore {
   private val analysisFileName = "inc_compile.txt"
   private val companionsFileName = "api_companions.txt"
 
-  def apply(file: File): AnalysisStore = new FileBasedStoreImpl(file, TextAnalysisFormat)
-  def apply(file: File, format: TextAnalysisFormat): AnalysisStore = new FileBasedStoreImpl(file, format)
+  def apply(file: File): AnalysisStore =
+    new FileBasedStoreImpl(file, TextAnalysisFormat)
+  def apply(file: File, format: TextAnalysisFormat): AnalysisStore =
+    new FileBasedStoreImpl(file, format)
   def apply(file: File, format: AnalysisMappers): AnalysisStore =
     new FileBasedStoreImpl(file, new TextAnalysisFormat(format))
 
-  private final class FileBasedStoreImpl(file: File, format: TextAnalysisFormat) extends AnalysisStore {
+  private final class FileBasedStoreImpl(
+    file: File,
+    format: TextAnalysisFormat
+  )
+    extends AnalysisStore {
     val companionsStore = new FileBasedCompanionsMapStore(file)
 
     /**
@@ -39,13 +45,16 @@ object FileBasedStore {
       if (!file.getParentFile.exists()) file.getParentFile.mkdirs()
       Using.zipOutputStream(new FileOutputStream(tmpAnalysisFile)) {
         outputStream =>
-          val writer = new BufferedWriter(new OutputStreamWriter(outputStream, IO.utf8))
+          val writer =
+            new BufferedWriter(new OutputStreamWriter(outputStream, IO.utf8))
           outputStream.putNextEntry(new ZipEntry(analysisFileName))
           format.write(writer, analysis, setup)
           outputStream.closeEntry()
           if (setup.storeApis()) {
             outputStream.putNextEntry(new ZipEntry(companionsFileName))
-            format.writeCompanionMap(writer, analysis match { case a: Analysis => a.apis })
+            format.writeCompanionMap(writer, analysis match {
+              case a: Analysis => a.apis
+            })
             outputStream.closeEntry()
           }
       }
@@ -57,11 +66,11 @@ object FileBasedStore {
       allCatch.opt(getUncaught())
 
     def getUncaught(): (CompileAnalysis, MiniSetup) =
-      Using.zipInputStream(new FileInputStream(file)) {
-        inputStream =>
-          lookupEntry(inputStream, analysisFileName)
-          val writer = new BufferedReader(new InputStreamReader(inputStream, IO.utf8))
-          format.read(writer, companionsStore)
+      Using.zipInputStream(new FileInputStream(file)) { inputStream =>
+        lookupEntry(inputStream, analysisFileName)
+        val writer =
+          new BufferedReader(new InputStreamReader(inputStream, IO.utf8))
+        format.read(writer, companionsStore)
       }
   }
 
@@ -72,15 +81,16 @@ object FileBasedStore {
       case None                                 => sys.error(s"$name not found in the zip file")
     }
 
-  private final class FileBasedCompanionsMapStore(file: File) extends CompanionsStore {
+  private final class FileBasedCompanionsMapStore(file: File)
+    extends CompanionsStore {
     def get(): Option[(Map[String, Companions], Map[String, Companions])] =
       allCatch.opt(getUncaught())
     def getUncaught(): (Map[String, Companions], Map[String, Companions]) =
-      Using.zipInputStream(new FileInputStream(file)) {
-        inputStream =>
-          lookupEntry(inputStream, companionsFileName)
-          val reader = new BufferedReader(new InputStreamReader(inputStream, IO.utf8))
-          TextAnalysisFormat.readCompanionMap(reader)
+      Using.zipInputStream(new FileInputStream(file)) { inputStream =>
+        lookupEntry(inputStream, companionsFileName)
+        val reader =
+          new BufferedReader(new InputStreamReader(inputStream, IO.utf8))
+        TextAnalysisFormat.readCompanionMap(reader)
       }
   }
 }

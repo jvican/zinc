@@ -11,9 +11,14 @@ import xsbti.Logger
 import Log.debug
 
 class ScaladocInterface {
-  def run(args: Array[String], log: Logger, delegate: xsbti.Reporter) = (new Runner(args, log, delegate)).run
+  def run(args: Array[String], log: Logger, delegate: xsbti.Reporter) =
+    (new Runner(args, log, delegate)).run
 }
-private class Runner(args: Array[String], log: Logger, delegate: xsbti.Reporter) {
+private class Runner(
+  args: Array[String],
+  log: Logger,
+  delegate: xsbti.Reporter
+) {
   import scala.tools.nsc.{ doc, Global, reporters }
   import reporters.Reporter
   val docSettings: doc.Settings = new doc.Settings(Log.settingsError(log))
@@ -29,7 +34,12 @@ private class Runner(args: Array[String], log: Logger, delegate: xsbti.Reporter)
       processor.document(command.files)
     }
     reporter.printSummary()
-    if (!noErrors) throw new InterfaceCompileFailed(args, reporter.problems, "Scaladoc generation failed")
+    if (!noErrors)
+      throw new InterfaceCompileFailed(
+        args,
+        reporter.problems,
+        "Scaladoc generation failed"
+      )
   }
 
   object forScope {
@@ -42,13 +52,16 @@ private class Runner(args: Array[String], log: Logger, delegate: xsbti.Reporter)
         def forScaladoc = false
       }
 
-      object compiler extends Global(command.settings, reporter) with GlobalCompat {
+      object compiler
+        extends Global(command.settings, reporter)
+        with GlobalCompat {
         override def onlyPresentation = true
         override def forScaladoc = true
         class DefaultDocDriver // 2.8 source compatibility
         {
           assert(false)
-          def process(units: Iterator[CompilationUnit]) = error("for 2.8 compatibility only")
+          def process(units: Iterator[CompilationUnit]) =
+            error("for 2.8 compatibility only")
         }
       }
       def document(ignore: Seq[String]): Unit = {
@@ -56,13 +69,12 @@ private class Runner(args: Array[String], log: Logger, delegate: xsbti.Reporter)
         val run = new Run
         run compile command.files
 
-        val generator =
-          {
-            new DefaultDocDriver {
-              lazy val global: compiler.type = compiler
-              lazy val settings = docSettings
-            }
+        val generator = {
+          new DefaultDocDriver {
+            lazy val global: compiler.type = compiler
+            lazy val settings = docSettings
           }
+        }
         generator.process(run.units)
       }
     }

@@ -69,7 +69,8 @@ final class AnalyzingJavaCompiler private[sbt] (
     progressOpt: Option[CompileProgress]
   ): Unit = {
     // Helper for finding the ancestor of two files
-    @annotation.tailrec def ancestor(f1: File, f2: File): Boolean = {
+    @annotation.tailrec
+    def ancestor(f1: File, f2: File): Boolean = {
       if (f2 eq null) false
       else if (f1 == f2) true
       else ancestor(f1, f2.getParentFile)
@@ -85,9 +86,11 @@ final class AnalyzingJavaCompiler private[sbt] (
           Map(Some(single.outputDirectory) -> sources)
         case multi: MultipleOutput =>
           sources.groupBy { src =>
-            multi.outputGroups.find {
-              out => ancestor(out.sourceDirectory, src)
-            }.map(_.outputDirectory)
+            multi.outputGroups
+              .find { out =>
+                ancestor(out.sourceDirectory, src)
+              }
+              .map(_.outputDirectory)
           }
       }
 
@@ -115,7 +118,11 @@ final class AnalyzingJavaCompiler private[sbt] (
 
       timed(javaCompilationPhase, log) {
         val args = JavaCompiler.commandArguments(
-          absClasspath, output, options, scalaInstance, classpathOptions
+          absClasspath,
+          output,
+          options,
+          scalaInstance,
+          classpathOptions
         )
         val javaSources = sources.sortBy(_.getAbsolutePath).toArray
         val success =
@@ -131,7 +138,10 @@ final class AnalyzingJavaCompiler private[sbt] (
       }
 
       /** Read the API information from [[Class]] to analyze dependencies. */
-      def readAPI(source: File, classes: Seq[Class[_]]): Set[(String, String)] = {
+      def readAPI(
+        source: File,
+        classes: Seq[Class[_]]
+      ): Set[(String, String)] = {
         val (apis, inherits) = ClassToAPI.process(classes)
         apis.foreach(callback.api(source, _))
         inherits.map {

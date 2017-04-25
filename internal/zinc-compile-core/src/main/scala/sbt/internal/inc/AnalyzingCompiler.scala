@@ -243,7 +243,10 @@ final class AnalyzingCompiler(
   ): Seq[String] = {
     val (classpathString, bootClasspath) = consoleClasspaths(classpath)
     val argsObj = call("xsbt.ConsoleInterface", "commandArguments", log)(
-      classOf[Array[String]], classOf[String], classOf[String], classOf[xLogger]
+      classOf[Array[String]],
+      classOf[String],
+      classOf[String],
+      classOf[xLogger]
     )(options.toArray[String], bootClasspath, classpathString, log)
     argsObj.asInstanceOf[Array[String]].toSeq
   }
@@ -336,18 +339,25 @@ object AnalyzingCompiler {
       if (files.exists(isSource)) files else Set()
 
     /** Generate jar from compilation dirs, the resources and a target name. */
-    def generateJar(outputDir: File, dir: File, resources: Seq[File], targetJar: File) = {
+    def generateJar(
+      outputDir: File,
+      dir: File,
+      resources: Seq[File],
+      targetJar: File
+    ) = {
       import sbt.io.Path._
       copy(resources.pair(rebase(dir, outputDir)))
       val toBeZipped = outputDir.allPaths.pair(
-        relativeTo(outputDir), errorIfNone = false
+        relativeTo(outputDir),
+        errorIfNone = false
       )
       zip(toBeZipped, targetJar)
     }
 
     /** Handle the compilation failure of the Scala compiler. */
     def handleCompilationError(compilation: => Unit) = {
-      try compilation catch {
+      try compilation
+      catch {
         case e: xsbti.CompileFailed =>
           val msg = s"Error compiling the sbt component '$id'"
           throw new CompileFailed(e.arguments, msg, e.problems)
@@ -363,7 +373,8 @@ object AnalyzingCompiler {
       val (sourceFiles, resources) = extractedSources.partition(isSource)
       withTemporaryDirectory { outputDirectory =>
         val scalaVersion = compiler.scalaInstance.actualVersion
-        val msg = s"Non-compiled module '$id' for Scala $scalaVersion. Compiling..."
+        val msg =
+          s"Non-compiled module '$id' for Scala $scalaVersion. Compiling..."
         log.info(msg)
         val start = System.currentTimeMillis
         handleCompilationError {

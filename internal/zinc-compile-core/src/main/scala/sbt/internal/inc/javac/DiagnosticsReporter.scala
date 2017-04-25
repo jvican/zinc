@@ -22,14 +22,17 @@ import javax.tools.Diagnostic.NOPOS
  * A diagnostics listener that feeds all messages into the given reporter.
  * @param reporter
  */
-final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[JavaFileObject] {
+final class DiagnosticsReporter(reporter: Reporter)
+  extends DiagnosticListener[JavaFileObject] {
   val END_OF_LINE_MATCHER = "(\r\n)|[\r]|[\n]"
   val EOL = System.getProperty("line.separator")
 
   private[this] var errorEncountered = false
   def hasErrors: Boolean = errorEncountered
 
-  private def fixedDiagnosticMessage(d: Diagnostic[_ <: JavaFileObject]): String = {
+  private def fixedDiagnosticMessage(
+    d: Diagnostic[_ <: JavaFileObject]
+  ): String = {
     def getRawMessage = d.getMessage(null)
     def fixWarnOrErrorMessage = {
       val tmp = getRawMessage
@@ -47,7 +50,9 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
       lines.mkString(EOL)
     }
     d.getKind match {
-      case Diagnostic.Kind.ERROR | Diagnostic.Kind.WARNING | Diagnostic.Kind.MANDATORY_WARNING => fixWarnOrErrorMessage
+      case Diagnostic.Kind.ERROR | Diagnostic.Kind.WARNING |
+        Diagnostic.Kind.MANDATORY_WARNING =>
+        fixWarnOrErrorMessage
       case _ => getRawMessage
     }
   }
@@ -56,7 +61,8 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
     val severity =
       d.getKind match {
         case Diagnostic.Kind.ERROR => Severity.Error
-        case Diagnostic.Kind.WARNING | Diagnostic.Kind.MANDATORY_WARNING => Severity.Warn
+        case Diagnostic.Kind.WARNING | Diagnostic.Kind.MANDATORY_WARNING =>
+          Severity.Warn
         case _ => Severity.Info
       }
     val msg = fixedDiagnosticMessage(d)
@@ -65,7 +71,8 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
     reporter.log(pos, msg, severity)
   }
 
-  private class PositionImpl(d: Diagnostic[_ <: JavaFileObject]) extends xsbti.Position {
+  private class PositionImpl(d: Diagnostic[_ <: JavaFileObject])
+    extends xsbti.Position {
     // https://docs.oracle.com/javase/7/docs/api/javax/tools/Diagnostic.html
     // Negative values (except NOPOS) and 0 are not valid line or column numbers,
     // except that you can cause this number to occur by putting "abc {}" in A.java.
@@ -78,25 +85,45 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
         case x           => Option(x)
       }
 
-    override val line: Optional[Integer] = o2jo(checkNoPos(d.getLineNumber) map { x => new Integer(x.toInt) })
+    override val line: Optional[Integer] = o2jo(
+      checkNoPos(d.getLineNumber) map { x =>
+        new Integer(x.toInt)
+      }
+    )
     def startPosition: Option[Long] = checkNoPos(d.getStartPosition)
     def endPosition: Option[Long] = checkNoPos(d.getEndPosition)
-    override val offset: Optional[Integer] = o2jo(checkNoPos(d.getPosition) map { x => new Integer(x.toInt) })
+    override val offset: Optional[Integer] = o2jo(
+      checkNoPos(d.getPosition) map { x =>
+        new Integer(x.toInt)
+      }
+    )
     override def lineContent: String = {
       def getDiagnosticLine: Option[String] =
         try {
           // See com.sun.tools.javac.api.ClientCodeWrapper.DiagnosticSourceUnwrapper
           val diagnostic = d.getClass.getField("d").get(d)
           // See com.sun.tools.javac.util.JCDiagnostic#getDiagnosticSource
-          val getDiagnosticSourceMethod = diagnostic.getClass.getDeclaredMethod("getDiagnosticSource")
-          val getPositionMethod = diagnostic.getClass.getDeclaredMethod("getPosition")
-          (Option(getDiagnosticSourceMethod.invoke(diagnostic)), Option(getPositionMethod.invoke(diagnostic))) match {
-            case (Some(diagnosticSource), Some(position: java.lang.Long)) =>
-              // See com.sun.tools.javac.util.DiagnosticSource
-              val getLineMethod = diagnosticSource.getClass.getMethod("getLine", Integer.TYPE)
-              Option(getLineMethod.invoke(diagnosticSource, new Integer(position.intValue()))).map(_.toString)
-            case _ => None
-          }
+          val getDiagnosticSourceMethod =
+            diagnostic.getClass.getDeclaredMethod("getDiagnosticSource")
+          val getPositionMethod =
+            diagnostic.getClass.getDeclaredMethod("getPosition")
+          (
+            Option(getDiagnosticSourceMethod.invoke(diagnostic)),
+            Option(getPositionMethod.invoke(diagnostic))
+          ) match {
+              case (Some(diagnosticSource), Some(position: java.lang.Long)) =>
+                // See com.sun.tools.javac.util.DiagnosticSource
+                val getLineMethod =
+                  diagnosticSource.getClass.getMethod("getLine", Integer.TYPE)
+                Option(
+                  getLineMethod.invoke(
+                    diagnosticSource,
+                    new Integer(position.intValue())
+                  )
+                )
+                .map(_.toString)
+              case _ => None
+            }
         } catch {
           // TODO - catch ReflectiveOperationException once sbt is migrated to JDK7
           case ignored: Throwable => None
@@ -106,8 +133,9 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
         Option(d.getSource) match {
           case Some(source: JavaFileObject) =>
             (Option(source.getCharContent(true)), startPosition, endPosition) match {
-              case (Some(cc), Some(start), Some(end)) => cc.subSequence(start.toInt, end.toInt).toString
-              case _                                  => ""
+              case (Some(cc), Some(start), Some(end)) =>
+                cc.subSequence(start.toInt, end.toInt).toString
+              case _ => ""
             }
           case _ => ""
         }
@@ -120,10 +148,14 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
     override val pointer: Optional[Integer] = o2jo(Option.empty[Integer])
     override val pointerSpace: Optional[String] = o2jo(Option.empty[String])
     override def toString: String =
-      if (sourceUri.isDefined) s"${sourceUri.get}:${if (line.isPresent) line.get else -1}"
+      if (sourceUri.isDefined)
+        s"${sourceUri.get}:${if (line.isPresent) line.get else -1}"
       else ""
     private def fixSource[T <: JavaFileObject](source: T): Option[String] = {
-      try Option(source).map(_.toUri.normalize).map(new File(_)).map(_.getAbsolutePath)
+      try Option(source)
+        .map(_.toUri.normalize)
+        .map(new File(_))
+        .map(_.getAbsolutePath)
       catch {
         case t: IllegalArgumentException =>
           // Oracle JDK6 has a super dumb notion of what a URI is.  In fact, it's not even a legimitate URL, but a dump

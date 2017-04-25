@@ -55,7 +55,8 @@ final class CompilerArguments(
       else absString(compilerClasspath)
     val classpathOption = Seq("-classpath", stringClasspath)
     val outputOption: Seq[String] = outputDirectory
-      .map(output => List("-d", output.getAbsolutePath)).getOrElse(Nil)
+      .map(output => List("-d", output.getAbsolutePath))
+      .getOrElse(Nil)
     val bootClasspath = bootClasspathOption(hasLibrary(classpath))
     options ++ outputOption ++ bootClasspath ++ classpathOption ++ abs(sources)
   }
@@ -69,12 +70,15 @@ final class CompilerArguments(
   def finishClasspath(classpath: Seq[File]): Seq[File] = {
     val filteredClasspath = filterLibrary(classpath)
     val extraCompiler = include(cpOptions.compiler, scalaInstance.compilerJar)
-    val extraClasspath = include(cpOptions.extra, scalaInstance.otherJars(): _*)
+    val extraClasspath =
+      include(cpOptions.extra, scalaInstance.otherJars(): _*)
     filteredClasspath ++ extraCompiler ++ extraClasspath
   }
 
   def createBootClasspathFor(classpath: Seq[File]): String =
-    createBootClasspath(hasLibrary(classpath) || cpOptions.compiler || cpOptions.extra)
+    createBootClasspath(
+      hasLibrary(classpath) || cpOptions.compiler || cpOptions.extra
+    )
 
   /**
    * Return the Scala library to the boot classpath if `addLibrary` is true.

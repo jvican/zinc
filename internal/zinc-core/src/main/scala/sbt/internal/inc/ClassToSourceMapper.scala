@@ -15,14 +15,15 @@ import sbt.internal.util.Relation
 import xsbt.api.APIUtil
 
 /**
- * Maps class-based dependencies to source dependencies using `classes` relation.
- *
- * The mapping is performed using two relations that track declared classes before
- * and after recompilation of sources. This way, we can properly map dependencies
- * on classes that have been moved between source files. In such case, a single
- * class can be mapped to two different source files.
- */
-class ClassToSourceMapper(previousRelations: Relations, recompiledRelations: Relations) {
+  * Maps class-based dependencies to source dependencies using `classes` relation.
+  *
+  * The mapping is performed using two relations that track declared classes before
+  * and after recompilation of sources. This way, we can properly map dependencies
+  * on classes that have been moved between source files. In such case, a single
+  * class can be mapped to two different source files.
+  */
+class ClassToSourceMapper(previousRelations: Relations,
+                          recompiledRelations: Relations) {
 
   def toSrcFile(className: String): Set[File] = {
     val srcs = previousRelations.classes.reverse(className) ++
@@ -34,16 +35,18 @@ class ClassToSourceMapper(previousRelations: Relations, recompiledRelations: Rel
   }
 
   def isDefinedInScalaSrc(className: String): Boolean = {
-    toSrcFile(className).forall(srcFile => APIUtil.isScalaSourceName(srcFile.getName))
+    toSrcFile(className).forall(srcFile =>
+      APIUtil.isScalaSourceName(srcFile.getName))
   }
 
   /**
-   * Maps both forward and backward parts of passed relation using toSrcFile method.
-   *
-   * This method should be used to map internal (within single project) class
-   * dependencies to source dependencies.
-   */
-  def convertToSrcDependency(classDependency: Relation[String, String]): Relation[File, File] = {
+    * Maps both forward and backward parts of passed relation using toSrcFile method.
+    *
+    * This method should be used to map internal (within single project) class
+    * dependencies to source dependencies.
+    */
+  def convertToSrcDependency(
+      classDependency: Relation[String, String]): Relation[File, File] = {
     def convertRelationMap(m: Map[String, Set[String]]): Map[File, Set[File]] = {
       val pairs = m.toSeq.flatMap {
         case (key, values) =>
@@ -59,12 +62,13 @@ class ClassToSourceMapper(previousRelations: Relations, recompiledRelations: Rel
   }
 
   /**
-   * Converts class dependency into source-class dependency using toSrcFile method.
-   *
-   * This method should be used to convert internal class->external class dependencies into
-   * internal source->external class dependencies.
-   */
-  def convertToExternalSrcDependency(classDependency: Relation[String, String]): Relation[File, String] = {
+    * Converts class dependency into source-class dependency using toSrcFile method.
+    *
+    * This method should be used to convert internal class->external class dependencies into
+    * internal source->external class dependencies.
+    */
+  def convertToExternalSrcDependency(
+      classDependency: Relation[String, String]): Relation[File, String] = {
     def convertMapKeys(m: Map[String, Set[String]]): Map[File, Set[String]] = {
       val pairs = m.toSeq.flatMap {
         case (key, values) =>

@@ -16,6 +16,7 @@ import xsbti.compile.ClasspathOptions
  * that create typical classpath options based on the desired use-case.
  */
 class ClasspathOptionsUtil {
+
   /** Define [[ClasspathOptions]] where the client manages everything. */
   def manual = new ClasspathOptions(false, false, false, true, false)
 
@@ -43,7 +44,8 @@ class ClasspathOptionsUtil {
    * automatically configured by the underlying implementation.
    * @param compiler Whether the Scala compiler is in the classpath.
    */
-  def javac(compiler: Boolean) = new ClasspathOptions(false, compiler, false, false, false)
+  def javac(compiler: Boolean) =
+    new ClasspathOptions(false, compiler, false, false, false)
 
   /**
    * Define [[ClasspathOptions]] where:

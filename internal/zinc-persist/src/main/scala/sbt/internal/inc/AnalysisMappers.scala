@@ -17,30 +17,36 @@ import xsbti.compile.MiniSetup
 import scala.util.Try
 
 case class Mapper[V](read: String => V, write: V => String)
-case class ContextAwareMapper[C, V](read: (C, String) => V, write: (C, V) => String)
+case class ContextAwareMapper[C, V](
+  read: (C, String) => V,
+  write: (C, V) => String
+)
 
 object Mapper {
-  val forFile: Mapper[File] = Mapper(FormatCommons.stringToFile, FormatCommons.fileToString)
+  val forFile: Mapper[File] =
+    Mapper(FormatCommons.stringToFile, FormatCommons.fileToString)
   val forString: Mapper[String] = Mapper(identity, identity)
-  val forStamp: ContextAwareMapper[File, Stamp] = ContextAwareMapper((_, v) => Stamp.fromString(v), (_, s) => s.toString)
+  val forStamp: ContextAwareMapper[File, Stamp] =
+    ContextAwareMapper((_, v) => Stamp.fromString(v), (_, s) => s.toString)
   val forUsedName: Mapper[UsedName] = {
     val enumSetSerializer = EnumSetSerializer(UseScope.values())
     def serialize(usedName: UsedName): String =
       s"${enumSetSerializer.serialize(usedName.scopes)}${usedName.name}"
 
-    def deserialize(s: String) = UsedName(s.tail, enumSetSerializer.deserialize(s.head))
+    def deserialize(s: String) =
+      UsedName(s.tail, enumSetSerializer.deserialize(s.head))
 
     Mapper(deserialize, serialize)
   }
 
   implicit class MapperOpts[V](mapper: Mapper[V]) {
-    def map[T](map: V => T, unmap: T => V) = Mapper[T](mapper.read.andThen(map), unmap.andThen(mapper.write))
+    def map[T](map: V => T, unmap: T => V) =
+      Mapper[T](mapper.read.andThen(map), unmap.andThen(mapper.write))
   }
 
   def rebaseFile(from: Path, to: Path): Mapper[File] = {
     def rebaseFile(from: Path, to: Path): File => File =
-      f =>
-        Try { to.resolve(from.relativize(f.toPath)).toFile }.getOrElse(f)
+      f => Try { to.resolve(from.relativize(f.toPath)).toFile }.getOrElse(f)
 
     forFile.map(rebaseFile(from, to), rebaseFile(to, from))
   }
@@ -54,13 +60,16 @@ object Mapper {
       }.getOrElse(FormatCommons.fileToString(f))
 
     def read(string: String): File =
-      if (string.startsWith(header)) root.resolve(string.drop(header.length)).toFile
+      if (string.startsWith(header))
+        root.resolve(string.drop(header.length)).toFile
       else FormatCommons.stringToFile(string)
 
     Mapper[File](read, write)
   }
 
-  def updateModificationDateFileMapper(from: Mapper[File]): ContextAwareMapper[File, Stamp] =
+  def updateModificationDateFileMapper(
+    from: Mapper[File]
+  ): ContextAwareMapper[File, Stamp] =
     ContextAwareMapper(
       (binaryFile, _) => Stamp.lastModified(from.read(binaryFile.toString)),
       (_, stamp) => stamp.toString
@@ -98,9 +107,12 @@ trait AnalysisMappersAdapter extends AnalysisMappers {
   override val productMapper: Mapper[File] = Mapper.forFile
   override val binaryMapper: Mapper[File] = Mapper.forFile
 
-  override val binaryStampMapper: ContextAwareMapper[File, Stamp] = Mapper.forStamp
-  override val productStampMapper: ContextAwareMapper[File, Stamp] = Mapper.forStamp
-  override val sourceStampMapper: ContextAwareMapper[File, Stamp] = Mapper.forStamp
+  override val binaryStampMapper: ContextAwareMapper[File, Stamp] =
+    Mapper.forStamp
+  override val productStampMapper: ContextAwareMapper[File, Stamp] =
+    Mapper.forStamp
+  override val sourceStampMapper: ContextAwareMapper[File, Stamp] =
+    Mapper.forStamp
 
   override val classpathMapper: Mapper[File] = Mapper.forFile
 

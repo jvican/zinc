@@ -51,7 +51,10 @@ import Compat._
  * The tree walking algorithm walks into TypeTree.original explicitly.
  *
  */
-class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) extends Compat with ClassName with GlobalHelpers {
+class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType)
+  extends Compat
+  with ClassName
+  with GlobalHelpers {
 
   import global._
   import JavaUtils._
@@ -59,7 +62,8 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
   private final class NamesUsedInClass {
     // Default names and other scopes are separated for performance reasons
     val defaultNames: JavaSet[Name] = new JavaSet[global.Name]()
-    val scopedNames: JavaMap[Name, EnumSet[UseScope]] = new JavaMap[Name, EnumSet[UseScope]]()
+    val scopedNames: JavaMap[Name, EnumSet[UseScope]] =
+      new JavaMap[Name, EnumSet[UseScope]]()
 
     // We have to leave with commas on ends
     override def toString(): String = {
@@ -69,7 +73,8 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
         val otherScopes = scopedNames.get(name)
         if (otherScopes != null) {
           builder.append(" in [")
-          otherScopes.foreach(scope => builder.append(scope.name()).append(", "))
+          otherScopes.foreach(scope =>
+            builder.append(scope.name()).append(", "))
           builder.append("]")
         }
         builder.append(", ")
@@ -118,34 +123,32 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
     debuglog {
       val msg = s"The ${unit.source} contains the following used names:\n"
       val builder = new StringBuilder(msg)
-      traverser.usedNamesFromClasses.foreach {
-        (name, usedNames) =>
-          builder
-            .append(name.toString.trim)
-            .append(": ")
-            .append(usedNames.toString())
-            .append("\n")
-          ()
+      traverser.usedNamesFromClasses.foreach { (name, usedNames) =>
+        builder
+          .append(name.toString.trim)
+          .append(": ")
+          .append(usedNames.toString())
+          .append("\n")
+        ()
       }
       builder.toString()
     }
 
     // Handle names circumscribed to classes
-    traverser.usedNamesFromClasses.foreach {
-      (rawClassName, usedNames) =>
-        val className = rawClassName.toString.trim
-        usedNames.defaultNames.foreach { rawUsedName =>
-          val useName = rawUsedName.decoded.trim
-          val existingScopes = usedNames.scopedNames.get(rawUsedName)
-          val useScopes = {
-            if (existingScopes == null) DefaultScopes
-            else {
-              existingScopes.add(UseScope.Default)
-              existingScopes
-            }
+    traverser.usedNamesFromClasses.foreach { (rawClassName, usedNames) =>
+      val className = rawClassName.toString.trim
+      usedNames.defaultNames.foreach { rawUsedName =>
+        val useName = rawUsedName.decoded.trim
+        val existingScopes = usedNames.scopedNames.get(rawUsedName)
+        val useScopes = {
+          if (existingScopes == null) DefaultScopes
+          else {
+            existingScopes.add(UseScope.Default)
+            existingScopes
           }
-          callback.usedName(className, useName, useScopes)
         }
+        callback.usedName(className, useName, useScopes)
+      }
     }
   }
 
@@ -256,7 +259,9 @@ class ExtractUsedNames[GlobalType <: CallbackGlobal](val global: GlobalType) ext
       case Import(_, selectors: List[ImportSelector]) =>
         val names = getNamesOfEnclosingScope
         def usedNameInImportSelector(name: Name): Unit = {
-          if (!isEmptyName(name) && (name != nme.WILDCARD) && !names.contains(name)) {
+          if (!isEmptyName(name) && (name != nme.WILDCARD) && !names.contains(
+            name
+          )) {
             names.add(name)
             ()
           }

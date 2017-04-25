@@ -32,7 +32,9 @@ object Dependency {
  * where it originates from. The Symbol -> Classfile mapping is implemented by
  * LocateClassFile that we inherit from.
  */
-final class Dependency(val global: CallbackGlobal) extends LocateClassFile with GlobalHelpers {
+final class Dependency(val global: CallbackGlobal)
+  extends LocateClassFile
+  with GlobalHelpers {
   import global._
 
   def newPhase(prev: Phase): Phase = new DependencyPhase(prev)
@@ -101,14 +103,25 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
      * that is coming from either source code (not necessarily compiled in this compilation
      * run) or from class file and calls respective callback method.
      */
-    def processDependency(context: DependencyContext)(dep: ClassDependency): Unit = {
+    def processDependency(context: DependencyContext)(
+      dep: ClassDependency
+    ): Unit = {
       val fromClassName = classNameAsString(dep.from)
 
       def binaryDependency(file: File, binaryClassName: String) =
-        callback.binaryDependency(file, binaryClassName, fromClassName, sourceFile, context)
+        callback.binaryDependency(
+          file,
+          binaryClassName,
+          fromClassName,
+          sourceFile,
+          context
+        )
 
       import scala.tools.nsc.io.AbstractFile
-      def processExternalDependency(binaryClassName: String, at: AbstractFile) = {
+      def processExternalDependency(
+        binaryClassName: String,
+        at: AbstractFile
+      ) = {
         at match {
           case zipEntry: ZipArchive#Entry =>
             // The dependency comes from a JAR
@@ -143,7 +156,8 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
 
   private case class ClassDependency(from: Symbol, to: Symbol)
 
-  private final class DependencyTraverser(processor: DependencyProcessor) extends Traverser {
+  private final class DependencyTraverser(processor: DependencyProcessor)
+    extends Traverser {
     // are we traversing an Import node at the moment?
     private var inImportNode = false
 
@@ -259,7 +273,12 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
         if (inImportNode) addTopLevelImportDependency(dep)
         else devWarning(Feedback.missingEnclosingClass(dep, currentOwner))
       } else {
-        addClassDependency(_memberRefCache, processor.memberRef, fromClass, dep)
+        addClassDependency(
+          _memberRefCache,
+          processor.memberRef,
+          fromClass,
+          dep
+        )
       }
     }
 
@@ -308,9 +327,19 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
     private def addInheritanceDependency(dep: Symbol): Unit = {
       val fromClass = resolveDependencySource
       if (_isLocalSource) {
-        addClassDependency(_localInheritanceCache, processor.localInheritance, fromClass, dep)
+        addClassDependency(
+          _localInheritanceCache,
+          processor.localInheritance,
+          fromClass,
+          dep
+        )
       } else {
-        addClassDependency(_inheritanceCache, processor.inheritance, fromClass, dep)
+        addClassDependency(
+          _inheritanceCache,
+          processor.inheritance,
+          fromClass,
+          dep
+        )
       }
     }
 
@@ -354,17 +383,22 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
 
       case Template(parents, self, body) =>
         // use typeSymbol to dealias type aliases -- we want to track the dependency on the real class in the alias's RHS
-        def flattenTypeToSymbols(tp: Type): List[Symbol] = if (tp eq null) Nil
-        else tp match {
-          // rt.typeSymbol is redundant if we list out all parents, TODO: what about rt.decls?
-          case rt: RefinedType => rt.parents.flatMap(flattenTypeToSymbols)
-          case _               => List(tp.typeSymbol)
-        }
+        def flattenTypeToSymbols(tp: Type): List[Symbol] =
+          if (tp eq null) Nil
+          else
+            tp match {
+              // rt.typeSymbol is redundant if we list out all parents, TODO: what about rt.decls?
+              case rt: RefinedType => rt.parents.flatMap(flattenTypeToSymbols)
+              case _               => List(tp.typeSymbol)
+            }
 
         val inheritanceTypes = parents.map(_.tpe).toSet
         val inheritanceSymbols = inheritanceTypes.flatMap(flattenTypeToSymbols)
 
-        debuglog("Parent types for " + tree.symbol + " (self: " + self.tpt.tpe + "): " + inheritanceTypes + " with symbols " + inheritanceSymbols.map(_.fullName))
+        debuglog(
+          "Parent types for " + tree.symbol + " (self: " + self.tpt.tpe + "): " + inheritanceTypes + " with symbols " + inheritanceSymbols
+            .map(_.fullName)
+        )
 
         inheritanceSymbols.foreach { symbol =>
           addInheritanceDependency(symbol)
@@ -393,7 +427,8 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
       case _: ClassDef | _: ModuleDef if !ignoredSymbol(tree.symbol) =>
         // make sure we cache lookups for all classes declared in the compilation unit; the recorded information
         // will be used in Analyzer phase
-        val sym = if (tree.symbol.isModule) tree.symbol.moduleClass else tree.symbol
+        val sym =
+          if (tree.symbol.isModule) tree.symbol.moduleClass else tree.symbol
         localToNonLocalClass.resolveNonLocal(sym)
         super.traverse(tree)
       case other => super.traverse(other)

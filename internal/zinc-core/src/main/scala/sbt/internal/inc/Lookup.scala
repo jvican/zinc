@@ -16,6 +16,7 @@ import xsbti.compile.{ CompileAnalysis, ExternalHooks, FileHash }
  * an external (for another subproject) Analysis instance.
  */
 trait Lookup extends ExternalLookup {
+
   /**
    * Returns the current classpath if the classpath has changed from the last compilation.
    */
@@ -42,6 +43,7 @@ trait Lookup extends ExternalLookup {
 }
 
 trait ExternalLookup extends ExternalHooks.Lookup {
+
   /**
    * Used to provide information from external tools into sbt (e.g. IDEs)
    *
@@ -70,5 +72,8 @@ trait ExternalLookup extends ExternalHooks.Lookup {
    * Used to provide information from external tools into sbt (e.g. IDEs)
    * @return API changes
    */
-  def shouldDoIncrementalCompilation(changedClasses: Set[String], analysis: Analysis): Boolean
+  def shouldDoIncrementalCompilation(
+    changedClasses: Set[String],
+    analysis: Analysis
+  ): Boolean
 }

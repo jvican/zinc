@@ -33,12 +33,17 @@ case object CleanOutput extends CleanOutputMode
 case object FailOnNonEmpty extends CleanOutputMode
 case object CleanClasses extends CleanOutputMode
 
-class ExportableCache(val cacheLocation: Path, cleanOutputMode: CleanOutputMode = CleanOutput) extends CompilationCache {
+class ExportableCache(
+  val cacheLocation: Path,
+  cleanOutputMode: CleanOutputMode = CleanOutput
+)
+  extends CompilationCache {
 
   val analysisFile: Path = cacheLocation.resolve("analysis.zip")
   val classesZipFile: Path = cacheLocation.resolve("classes.zip")
 
-  protected def createMapper(projectLocation: File) = new ExportableCacheMapper(projectLocation.toPath)
+  protected def createMapper(projectLocation: File) =
+    new ExportableCacheMapper(projectLocation.toPath)
 
   protected def cacheVerifier(): CacheVerifier = NoopVerifier
 
@@ -48,19 +53,26 @@ class ExportableCache(val cacheLocation: Path, cleanOutputMode: CleanOutputMode 
     case _ => throw new RuntimeException("Only single output is supported")
   }
 
-  override def loadCache(projectLocation: File): Option[(CompileAnalysis, MiniSetup)] = {
-    val store = FileBasedStore(analysisFile.toFile, createMapper(projectLocation))
+  override def loadCache(
+    projectLocation: File
+  ): Option[(CompileAnalysis, MiniSetup)] = {
+    val store =
+      FileBasedStore(analysisFile.toFile, createMapper(projectLocation))
 
     for ((newAnalysis: Analysis, newSetup) <- store.get()) yield {
 
       val importedClassFiles = importBinaryCache(newAnalysis, newSetup)
-      val analysisForLocalProducts = updateStampsForImportedProducts(newAnalysis, importedClassFiles)
+      val analysisForLocalProducts =
+        updateStampsForImportedProducts(newAnalysis, importedClassFiles)
 
       (analysisForLocalProducts, newSetup)
     }
   }
 
-  private def updateStampsForImportedProducts(analysis: Analysis, importedFiles: Set[File]): Analysis = {
+  private def updateStampsForImportedProducts(
+    analysis: Analysis,
+    importedFiles: Set[File]
+  ): Analysis = {
     val oldStamps = analysis.stamps
 
     val updatedProducts = oldStamps.products.map {
@@ -78,8 +90,14 @@ class ExportableCache(val cacheLocation: Path, cleanOutputMode: CleanOutputMode 
     analysis.copy(stamps = newStamps)
   }
 
-  def exportCache(projectLocation: File, currentAnalysisStore: AnalysisStore): Option[VerficationResults] = {
-    for ((currentAnalysis: Analysis, currentSetup) <- currentAnalysisStore.get()) yield {
+  def exportCache(
+    projectLocation: File,
+    currentAnalysisStore: AnalysisStore
+  ): Option[VerficationResults] = {
+    for (
+      (currentAnalysis: Analysis, currentSetup) <- currentAnalysisStore
+        .get()
+    ) yield {
       val verifier = cacheVerifier()
       val mapper = verifier.verifingMappers(createMapper(projectLocation))
       val remoteStore = FileBasedStore(analysisFile.toFile, mapper)
@@ -99,31 +117,42 @@ class ExportableCache(val cacheLocation: Path, cleanOutputMode: CleanOutputMode 
             if (output.list().nonEmpty) IO.delete(output)
           case FailOnNonEmpty =>
             if (output.list().nonEmpty)
-              throw new IllegalStateException(s"Output directory: $output is not empty and cleanOutput is false")
+              throw new IllegalStateException(
+                s"Output directory: $output is not empty and cleanOutput is false"
+              )
           case CleanClasses =>
             val classFiles = PathFinder(output) ** "*.class"
             IO.delete(classFiles.get)
         }
-      } else throw new IllegalStateException(s"Output file: $output is not a directory")
+      } else
+        throw new IllegalStateException(
+          s"Output file: $output is not a directory"
+        )
     }
   }
 
-  protected def importBinaryCache(newAnalysis: Analysis, newSetup: MiniSetup): Set[File] = {
+  protected def importBinaryCache(
+    newAnalysis: Analysis,
+    newSetup: MiniSetup
+  ): Set[File] = {
     val output = outputDirFor(newSetup)
     cleanOutput(output)
 
     IO.unzip(classesZipFile.toFile, output, preserveLastModified = true)
   }
 
-  protected def exportBinaryCache(currentAnalysis: Analysis, currentSetup: MiniSetup): Unit = {
+  protected def exportBinaryCache(
+    currentAnalysis: Analysis,
+    currentSetup: MiniSetup
+  ): Unit = {
     val out = outputDirFor(currentSetup).toPath
 
-    def files(f: File): List[File] = f :: (if (f.isDirectory) IO.listFiles(f).toList.flatMap(files) else Nil)
+    def files(f: File): List[File] =
+      f :: (if (f.isDirectory) IO.listFiles(f).toList.flatMap(files) else Nil)
 
-    val entries = files(out.toFile).map {
-      classFile =>
-        val mapping = out.relativize(classFile.toPath).toString
-        classFile -> mapping
+    val entries = files(out.toFile).map { classFile =>
+      val mapping = out.relativize(classFile.toPath).toString
+      classFile -> mapping
     }
 
     IO.zip(entries, classesZipFile.toFile)

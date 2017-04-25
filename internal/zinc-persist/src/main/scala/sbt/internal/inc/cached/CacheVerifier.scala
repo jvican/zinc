@@ -21,28 +21,42 @@ object NoVerification extends VerficationResults
  */
 abstract class CacheVerifier {
 
-  def verifingMappers(from: AnalysisMappers): AnalysisMappers = new AnalysisMappers {
-    override val outputDirMapper: Mapper[File] = analyzed("outputDirMapper", from.outputDirMapper)
-    override val sourceDirMapper: Mapper[File] = analyzed("sourceDirMapper", from.sourceDirMapper)
-    override val scalacOptions: Mapper[String] = analyzed("scalacOptions", from.scalacOptions)
-    override val javacOptions: Mapper[String] = analyzed("javacOptions", from.javacOptions)
-    override val sourceMapper: Mapper[File] = analyzed("sourceMapper", from.sourceMapper)
-    override val productMapper: Mapper[File] = analyzed("productMapper", from.productMapper)
-    override val binaryMapper: Mapper[File] = analyzed("binaryMapper", from.binaryMapper)
-    override val binaryStampMapper: ContextAwareMapper[File, Stamp] =
-      analyzed("binaryStampMapper", from.binaryStampMapper)
-    override val productStampMapper: ContextAwareMapper[File, Stamp] =
-      analyzed("productStampMapper", from.productStampMapper)
-    override val sourceStampMapper: ContextAwareMapper[File, Stamp] =
-      analyzed("sourceStampMapper", from.sourceStampMapper)
-    override val classpathMapper: Mapper[File] = analyzed("classpathMapper", from.classpathMapper)
+  def verifingMappers(from: AnalysisMappers): AnalysisMappers =
+    new AnalysisMappers {
+      override val outputDirMapper: Mapper[File] =
+        analyzed("outputDirMapper", from.outputDirMapper)
+      override val sourceDirMapper: Mapper[File] =
+        analyzed("sourceDirMapper", from.sourceDirMapper)
+      override val scalacOptions: Mapper[String] =
+        analyzed("scalacOptions", from.scalacOptions)
+      override val javacOptions: Mapper[String] =
+        analyzed("javacOptions", from.javacOptions)
+      override val sourceMapper: Mapper[File] =
+        analyzed("sourceMapper", from.sourceMapper)
+      override val productMapper: Mapper[File] =
+        analyzed("productMapper", from.productMapper)
+      override val binaryMapper: Mapper[File] =
+        analyzed("binaryMapper", from.binaryMapper)
+      override val binaryStampMapper: ContextAwareMapper[File, Stamp] =
+        analyzed("binaryStampMapper", from.binaryStampMapper)
+      override val productStampMapper: ContextAwareMapper[File, Stamp] =
+        analyzed("productStampMapper", from.productStampMapper)
+      override val sourceStampMapper: ContextAwareMapper[File, Stamp] =
+        analyzed("sourceStampMapper", from.sourceStampMapper)
+      override val classpathMapper: Mapper[File] =
+        analyzed("classpathMapper", from.classpathMapper)
 
-    override def mapOptionsFromCache(fromCache: MiniSetup): MiniSetup = fromCache
-  }
+      override def mapOptionsFromCache(fromCache: MiniSetup): MiniSetup =
+        fromCache
+    }
 
   def results: VerficationResults
 
-  protected def analyzeValue(category: String, serializedValue: String, deserializedValue: Any): Unit
+  protected def analyzeValue(
+    category: String,
+    serializedValue: String,
+    deserializedValue: Any
+  ): Unit
 
   private def analyzed[T](category: String, original: Mapper[T]): Mapper[T] = {
     def write(v: T): String = {
@@ -53,7 +67,10 @@ abstract class CacheVerifier {
     Mapper(original.read, write)
   }
 
-  private def analyzed[C, T](category: String, original: ContextAwareMapper[C, T]): ContextAwareMapper[C, T] = {
+  private def analyzed[C, T](
+    category: String,
+    original: ContextAwareMapper[C, T]
+  ): ContextAwareMapper[C, T] = {
     def write(c: C, v: T): String = {
       val result = original.write(c, v)
       analyzeValue(category, result, v)
@@ -65,7 +82,11 @@ abstract class CacheVerifier {
 }
 
 object NoopVerifier extends CacheVerifier {
-  override protected def analyzeValue(category: String, serializedValue: String, deserializedValue: Any): Unit = ()
+  override protected def analyzeValue(
+    category: String,
+    serializedValue: String,
+    deserializedValue: Any
+  ): Unit = ()
 
   override def verifingMappers(from: AnalysisMappers): AnalysisMappers = from
   override def results: VerficationResults = NoVerification

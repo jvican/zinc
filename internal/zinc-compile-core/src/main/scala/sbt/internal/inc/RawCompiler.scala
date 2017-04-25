@@ -25,7 +25,11 @@ import xsbti.compile.{ ClasspathOptions, ScalaInstance => XScalaInstance }
  * @param cp The classpath options that dictate which classpath entries to use.
  * @param log The logger where the Scalac compiler creation is reported.
  */
-class RawCompiler(val scalaInstance: XScalaInstance, cp: ClasspathOptions, log: sbt.util.Logger) {
+class RawCompiler(
+  val scalaInstance: XScalaInstance,
+  cp: ClasspathOptions,
+  log: sbt.util.Logger
+) {
 
   /**
    * Run the compiler with the usual compiler inputs.
@@ -38,10 +42,19 @@ class RawCompiler(val scalaInstance: XScalaInstance, cp: ClasspathOptions, log: 
    * @param outputDirectory The directory in which the class files are placed.
    * @param options The auxiliary options to Scala compilers.
    */
-  def apply(sources: Seq[File], classpath: Seq[File], outputDirectory: File, options: Seq[String]): Unit = {
+  def apply(
+    sources: Seq[File],
+    classpath: Seq[File],
+    outputDirectory: File,
+    options: Seq[String]
+  ): Unit = {
 
     /** Run the compiler and get the reporter attached to it. */
-    def getReporter(fqn: String, args: Array[String], isDotty: Boolean): AnyRef = {
+    def getReporter(
+      fqn: String,
+      args: Array[String],
+      isDotty: Boolean
+    ): AnyRef = {
       val mainClass = Class.forName(fqn, true, scalaInstance.loader)
       val process = mainClass.getMethod("process", classOf[Array[String]])
       val potentialReporter = process.invoke(null, args)
@@ -89,4 +102,5 @@ class CompileFailed(
   val arguments: Array[String],
   override val toString: String,
   val problems: Array[xsbti.Problem]
-) extends xsbti.CompileFailed with FeedbackProvidedException
+) extends xsbti.CompileFailed
+  with FeedbackProvidedException
