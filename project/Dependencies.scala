@@ -28,12 +28,12 @@ object Dependencies {
 
   val launcherInterface = "org.scala-sbt" % "launcher-interface" % "1.0.0"
 
-  def getSbtModulePath(key: String, name: String) = {
+  def getSbtModulePath(key: String, name: String): Option[URI] = {
     val localProps = new java.util.Properties()
     IO.load(localProps, file("project/local.properties"))
     val path = Option(localProps getProperty key) orElse (sys.props get key)
     path foreach (f => println(s"Using $name from $f"))
-    path
+    path.map(uri)
   }
 
   lazy val sbtIoPath = getSbtModulePath("sbtio.path", "sbt/io")
@@ -41,14 +41,14 @@ object Dependencies {
   lazy val sbtLmPath = getSbtModulePath("sbtlm.path", "sbt/lm")
 
   def addSbtModule(p: Project,
-                   path: Option[String],
+                   path: Option[URI],
                    projectName: String,
                    m: ModuleID,
                    c: Option[Configuration] = None) =
     path match {
-      case Some(f) =>
-        p dependsOn c.fold[ClasspathDependency](ProjectRef(file(f), projectName))(
-          ProjectRef(file(f), projectName) % _)
+      case Some(uri) =>
+        p dependsOn c.fold[ClasspathDependency](ProjectRef(uri, projectName))(
+          ProjectRef(uri, projectName) % _)
       case None => p settings (libraryDependencies += c.fold(m)(m % _))
     }
 

@@ -485,6 +485,7 @@ def scriptedUnpublishedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
 }
 
 lazy val publishAll = TaskKey[Unit]("publish-all")
+val crossPublish = TaskKey[Unit]("cross-publish/cros")
 lazy val publishLauncher = TaskKey[Unit]("publish-launcher")
 
 def customCommands: Seq[Setting[_]] = Seq(

@@ -63,29 +63,20 @@ trait BaseIvySpecification extends UnitSpec {
   def mkIvyConfiguration(uo: UpdateOptions): IvyConfiguration = {
     val paths = IvyPaths(currentBase, Some(currentTarget))
     val other = Vector.empty
-    val moduleConfs = Vector(ModuleConfiguration("*", chainResolver))
-    val off = false
+    val confs = Vector(ModuleConfiguration("*", chainResolver))
     val check = Vector.empty
-    val resCacheDir = currentTarget / "resolution-cache"
-    new InlineIvyConfiguration(paths,
-                               resolvers,
-                               other,
-                               moduleConfs,
-                               off,
-                               None,
-                               check,
-                               Some(resCacheDir),
-                               uo,
-                               log)
+    val cacheDir = Some(currentTarget / "resolution-cache")
+    new InlineIvyConfiguration(paths, resolvers, other, confs, None, check, cacheDir, uo, log)
   }
 
   def makeUpdateConfiguration: UpdateConfiguration = {
     val retrieveConfig =
       RetrieveConfiguration(currentManaged, Resolver.defaultRetrievePattern, false, None)
     UpdateConfiguration(Some(retrieveConfig),
-                        false,
+                        missingOk = false,
                         UpdateLogging.Full,
-                        ArtifactTypeFilter.forbid(Set("src", "doc")))
+                        ArtifactTypeFilter.forbid(Set("src", "doc")),
+                        offline = false)
   }
 
   def ivyUpdateEither(module: IvySbt#Module): Either[UnresolvedWarning, UpdateReport] = {

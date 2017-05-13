@@ -175,7 +175,8 @@ private[inc] class IvyComponentCompiler(compiler: RawCompiler,
       Some(retrieveConfiguration),
       missingOk = false,
       UpdateLogging.DownloadOnly,
-      ArtifactTypeFilter.forbid(Set("doc"))
+      ArtifactTypeFilter.forbid(Set("doc")),
+      offline = false
     )
 
     buffered.info(s"Attempting to fetch ${dependenciesNames(module)}. This operation may fail.")
