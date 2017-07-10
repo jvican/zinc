@@ -203,7 +203,6 @@ lazy val zincPersist = (project in internalPath / "zinc-persist")
   .configure(addBaseSettingsAndTestDeps)
   .settings(
     name := "zinc Persist",
-    libraryDependencies += sbinary,
     compileOrder := sbt.CompileOrder.Mixed,
     PB.targets in Compile := List(scalapb.gen() -> (sourceManaged in Compile).value)
   )
