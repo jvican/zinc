@@ -6,8 +6,9 @@ addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.3")
 addSbtPlugin("org.scala-sbt" % "sbt-houserules" % "0.3.3")
 addSbtPlugin("org.scala-sbt" % "sbt-contraband" % "0.3.0-M7")
 
+resolvers += Resolver.bintrayIvyRepo("scalacenter", "sbt-releases")
 addSbtPlugin(
-  ("com.thesamet" % "sbt-protoc" % "0.99.11")
+  ("com.thesamet" % "sbt-protoc" % "0.99.12")
     .exclude("com.trueaccord.scalapb", "protoc-bridge_2.10"))
 
 libraryDependencies += "com.trueaccord.scalapb" %% "compilerplugin-shaded" % "0.6.0"
