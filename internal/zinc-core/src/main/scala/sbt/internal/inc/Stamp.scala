@@ -9,13 +9,13 @@ package sbt
 package internal
 package inc
 
-import java.io.{ File, IOException, InputStream }
+import java.io.{File, IOException, InputStream, RandomAccessFile}
+import java.nio.channels.FileChannel.MapMode
 import java.util
 import java.util.Optional
 
-import net.openhft.hashing.LongHashFunction
-import sbt.io.{ Hash => IOHash }
-import xsbti.compile.analysis.{ ReadStamps, Stamp }
+import net.jpountz.xxhash.XXHashFactory
+import xsbti.compile.analysis.{ReadStamps, Stamp}
 
 import scala.collection.immutable.TreeMap
 import scala.util.matching.Regex
@@ -127,24 +127,27 @@ object Stamper {
     catch { case i: IOException => EmptyStamp }
   }
 
-  private final val xxHash = LongHashFunction.xx()
+  private final val hashFactory = XXHashFactory.fastestInstance()
+  private final val seed = 0x9747b28c
   private final val BufferSize = 8192
-  final val forHash: (File => Stamp) = (toStamp: File) => {
+
+  private def hashFile(toStamp: File): Stamp = {
     if (!toStamp.exists() || toStamp.isDirectory) EmptyStamp
     else {
       sbt.io.Using.fileInputStream(toStamp) { (is: InputStream) =>
-        val acc = new Array[Long](2)
+        val hash = hashFactory.newStreamingHash64(seed)
         val buffer = new Array[Byte](BufferSize)
-        while (is.read(buffer) >= 0) {
-          val checksumChunk = xxHash.hashBytes(buffer)
-          acc(1) = checksumChunk
-          acc(0) = xxHash.hashLongs(acc)
+        var readLength = is.read(buffer)
+        while (readLength >= 0) {
+          hash.update(buffer, 0, readLength)
+          readLength = is.read(buffer)
         }
-        new Hash64(acc(0).toInt)
+        new Hash64(hash.getValue)
       }
     }
   }
 
+  final val forHash: (File => Stamp) = hashFile _
   final val forLastModified = (toStamp: File) => tryStamp(new LastModified(toStamp.lastModified()))
 }
 
