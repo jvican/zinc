@@ -18,6 +18,38 @@ class ExtractUsedNamesSpecification extends UnitSpec {
     assert(usedNames("a.A") === expectedNames)
   }
 
+  it should "lkajsdf;" in {
+        val src =
+      """package math
+        |class MathUser extends App {
+        |  // for x=1, returns `4` not `3`
+        |  def use(m: Math, x: Int): Int =
+        |    m.inc2(x)
+        |  use(new Math(), 1)
+        |}
+      """.stripMargin
+    val src2 =
+      """package math
+        |class Math {
+        |  def inc(x: Int): Int = x + 1
+        |  def dec(x: Int): Int = x - 1
+        |  // Adding new method!
+        |  def inc2(x: Int): Int = x + 3
+        |}
+        |
+        |object Math {
+        |  implicit class XMath(m: Math) {
+        |    def inc2(x: Int): Int =
+        |      m.inc(m.inc(x))
+        |  }
+        |}
+      """.stripMargin
+    val compilerForTesting = new ScalaCompilerForUnitTesting
+    val usedNames = compilerForTesting.extractUsedNamesFromSrc(src, src2)
+    println("USED NAMESgtgtgt")
+    println(usedNames.mkString(", "))
+  }
+
   // test covers https://github.com/gkossakowski/sbt/issues/6
   it should "extract names in type tree" in {
     val srcA = """|package a {

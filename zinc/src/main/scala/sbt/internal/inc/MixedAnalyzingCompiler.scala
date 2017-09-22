@@ -178,7 +178,8 @@ object MixedAnalyzingCompiler {
       reporter: Reporter,
       compileOrder: CompileOrder = Mixed,
       skip: Boolean = false,
-      incrementalCompilerOptions: IncOptions,
+      incrementalCompilerOptions:
+      IncOptions,
       extra: List[(String, String)]
   ): CompileConfiguration = {
     val classpathHash = classpath map { x =>

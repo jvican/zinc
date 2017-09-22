@@ -33,6 +33,9 @@ class ClassToAPISpecification extends UnitSpec {
     assert(companionsB.classApi.structure.declared.isEmpty === false)
   }
 
+  it should "aklsjdf" in {
+  }
+
   it should "extract a private inner class" in {
     val src =
       """|class A {
