@@ -31,6 +31,7 @@ object BuildImplementation {
     // concurrentRestrictions in Global += Util.testExclusiveRestriction,
     Keys.scalaVersion := Dependencies.scala212,
     Keys.resolvers ++= BuildResolvers.all,
+    Keys.resolvers ~= BuildResolvers.removeRepeatedResolvers,
     Keys.testOptions += Tests.Argument(TestFrameworks.ScalaCheck, "-w", "1"),
     Keys.javacOptions in Compile ++= Seq("-Xlint", "-Xlint:-serial"),
     Keys.crossScalaVersions := Seq(Dependencies.scala211, Dependencies.scala212),
@@ -49,6 +50,9 @@ object BuildImplementation {
                    new URL("https://dl.bintray.com/sbt/ivy-snapshots/"))(Resolver.ivyStylePatterns)
     val all: List[Resolver] =
       List(TypesafeReleases, SonatypeSnapshots, BintrayMavenReleases, BintraySbtIvySnapshots)
+
+    // Naive way of implementing a filter to remove repeated resolvers.
+    def removeRepeatedResolvers(rs: Seq[Resolver]): Seq[Resolver] = rs.toSet.toVector
   }
 
   object BuildCommands {
