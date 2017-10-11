@@ -12,23 +12,6 @@ def mimaSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-def relaxNon212: Seq[Setting[_]] = Seq(
-  scalacOptions := {
-    val old = scalacOptions.value
-    scalaBinaryVersion.value match {
-      case "2.12" => old
-      case _ =>
-        old filterNot Set(
-          "-Xfatal-warnings",
-          "-deprecation",
-          "-Ywarn-unused",
-          "-Ywarn-unused-import",
-          "-YdisableFlatCpCaching"
-        )
-    }
-  }
-)
-
 val altLocalRepoName = "alternative-local"
 val altLocalRepoPath = sys.props("user.home") + "/.ivy2/sbt-alternative"
 lazy val altLocalResolver = Resolver.file(
@@ -262,7 +245,7 @@ lazy val compilerInterface = (project in file(CompilerInterfaceId))
     // but given that Scala 2.10 compiler cannot parse Java 8 source, it's probably good to keep this.
     crossScalaVersions := Seq(scala210),
     scalaVersion := scala210,
-    relaxNon212,
+    adaptOptionsForOldScalaVersions,
     libraryDependencies ++= Seq(scalaLibrary.value % Test),
     exportJars := true,
     resourceGenerators in Compile += Def
@@ -299,7 +282,7 @@ lazy val compilerBridge: Project = (project in internalPath / CompilerBridgeId)
   .dependsOn(compilerInterface % "compile;test->test", zincApiInfo % "test->test")
   .settings(
     crossScalaVersions := bridgeScalaVersions,
-    relaxNon212,
+    adaptOptionsForOldScalaVersions,
     libraryDependencies += scalaCompiler.value % "provided",
     autoScalaLibrary := false,
     // precompiledSettings,
@@ -362,7 +345,7 @@ lazy val zincApiInfo = (project in internalPath / ZincApiInfoId)
   .settings(
     name := "zinc ApiInfo",
     crossScalaVersions := bridgeScalaVersions,
-    relaxNon212,
+    adaptOptionsForOldScalaVersions,
     mimaSettings,
   )
 
@@ -373,7 +356,7 @@ lazy val zincClasspath = (project in internalPath / "zinc-classpath")
   .settings(
     name := "zinc Classpath",
     crossScalaVersions := bridgeScalaVersions,
-    relaxNon212,
+    adaptOptionsForOldScalaVersions,
     libraryDependencies ++= Seq(scalaCompiler.value, launcherInterface),
     mimaSettings,
   )
@@ -386,7 +369,7 @@ lazy val zincClassfile = (project in internalPath / "zinc-classfile")
   .settings(
     name := "zinc Classfile",
     crossScalaVersions := bridgeScalaVersions,
-    relaxNon212,
+    adaptOptionsForOldScalaVersions,
     mimaSettings,
   )
   .configure(addSbtIO, addSbtUtilLogging)

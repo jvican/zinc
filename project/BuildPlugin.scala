@@ -18,6 +18,24 @@ object BuildKeys {
   val CompilerInterfaceId = "compiler-interface"
   val CompilerBridgeId = "compiler-bridge"
   val ZincApiInfoId = "zinc-apiinfo"
+
+  private[this] val toFilterInOldScala: Set[String] = Set(
+    "-Xfatal-warnings",
+    "-deprecation",
+    "-Ywarn-unused",
+    "-Ywarn-unused-import",
+    "-YdisableFlatCpCaching"
+  )
+
+  def adaptOptionsForOldScalaVersions: Seq[Def.Setting[_]] = Seq(
+    Keys.scalacOptions := {
+      val old = Keys.scalacOptions.value
+      Keys.scalaBinaryVersion.value match {
+        case v if v == "2.12" || v == "2.13" => old
+        case _                               => old.filterNot(toFilterInOldScala)
+      }
+    }
+  )
 }
 
 object BuildImplementation {
