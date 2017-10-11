@@ -2,40 +2,6 @@ import Util._
 import Dependencies._
 import Scripted._
 
-def baseVersion = "1.1.0-SNAPSHOT"
-def internalPath = file("internal")
-
-def mimaSettings: Seq[Setting[_]] = Seq(
-  mimaPreviousArtifacts := Set(
-    organization.value % moduleName.value % "1.0.0"
-      cross (if (crossPaths.value) CrossVersion.binary else CrossVersion.disabled)
-  )
-)
-
-val altLocalRepoName = "alternative-local"
-val altLocalRepoPath = sys.props("user.home") + "/.ivy2/sbt-alternative"
-lazy val altLocalResolver = Resolver.file(
-  altLocalRepoName,
-  file(sys.props("user.home") + "/.ivy2/sbt-alternative"))(Resolver.ivyStylePatterns)
-lazy val altLocalPublish =
-  TaskKey[Unit]("alt-local-publish", "Publishes an artifact locally to an alternative location.")
-def altPublishSettings: Seq[Setting[_]] =
-  Seq(
-    resolvers += altLocalResolver,
-    altLocalPublish := {
-      import sbt.librarymanagement._
-      import sbt.internal.librarymanagement._
-      val config = (Keys.publishLocalConfiguration).value
-      val moduleSettings = (Keys.moduleSettings).value
-      val ivy = new IvySbt((ivyConfiguration.value))
-
-      val module = new ivy.Module(moduleSettings)
-      val newConfig = config.withResolverName(altLocalRepoName).withOverwrite(false)
-      streams.value.log.info(s"Publishing $module to local repo: $altLocalRepoName")
-      IvyActions.publish(module, newConfig, streams.value.log)
-    }
-  )
-
 val noPublish: Seq[Setting[_]] = List(
   publish := {},
   publishLocal := {},
@@ -64,52 +30,6 @@ lazy val zincRoot: Project = (project in file("."))
     zincScripted
   )
   .settings(
-    inThisBuild(
-      Seq(
-        git.baseVersion := baseVersion,
-        // https://github.com/sbt/sbt-git/issues/109
-        // Workaround from https://github.com/sbt/sbt-git/issues/92#issuecomment-161853239
-        git.gitUncommittedChanges := {
-          val statusCommands = Seq(
-            Seq("diff-index", "--cached", "HEAD"),
-            Seq("diff-index", "HEAD"),
-            Seq("diff-files"),
-            Seq("ls-files", "--exclude-standard", "--others")
-          )
-          // can't use git.runner.value because it's a task
-          val runner = com.typesafe.sbt.git.ConsoleGitRunner
-          val dir = baseDirectory.value
-          // sbt/zinc#334 Seemingly "git status" resets some stale metadata.
-          runner("status")(dir, com.typesafe.sbt.git.NullLogger)
-          val uncommittedChanges = statusCommands flatMap { c =>
-            val res = runner(c: _*)(dir, com.typesafe.sbt.git.NullLogger)
-            if (res.isEmpty) Nil else Seq(c -> res)
-          }
-
-          val un = uncommittedChanges.nonEmpty
-          if (un) {
-            uncommittedChanges foreach {
-              case (cmd, res) =>
-                sLog.value debug s"""Uncommitted changes found via "${cmd mkString " "}":\n${res}"""
-            }
-          }
-          un
-        },
-        version := {
-          val v = version.value
-          if (v contains "SNAPSHOT") git.baseVersion.value
-          else v
-        },
-        bintrayPackage := "zinc",
-        scmInfo := Some(ScmInfo(url("https://github.com/sbt/zinc"), "git@github.com:sbt/zinc.git")),
-        description := "Incremental compiler of Scala",
-        homepage := Some(url("https://github.com/sbt/zinc")),
-        developers +=
-          Developer("jvican", "Jorge Vicente Cantero", "@jvican", url("https://github.com/jvican")),
-        scalafmtOnCompile := true,
-        scalafmtVersion := "1.2.0",
-        scalafmtOnCompile in Sbt := false,
-      )),
     otherRootSettings,
     noPublish,
     name := "zinc Root",
@@ -263,7 +183,7 @@ lazy val compilerInterface = (project in file(CompilerInterfaceId))
     sourceManaged in (Compile, generateContrabands) := baseDirectory.value / "src" / "main" / "contraband-java",
     crossPaths := false,
     autoScalaLibrary := false,
-    altPublishSettings,
+    zincPublishLocalSettings,
     mimaSettings,
   )
   .configure(addSbtUtilInterface)
@@ -329,7 +249,7 @@ lazy val compilerBridge: Project = (project in internalPath / CompilerBridgeId)
       }
     },
     publishLocal := publishLocal.dependsOn(cleanSbtBridge).value,
-    altPublishSettings,
+    zincPublishLocalSettings,
     mimaSettings,
   )
 
@@ -413,8 +333,8 @@ def scriptedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
   // These two projects need to be visible in a repo even if the default
   // local repository is hidden, so we publish them to an alternate location and add
   // that alternate repo to the running scripted test (in Scripted.scriptedpreScripted).
-  (altLocalPublish in compilerInterface).value
-  (altLocalPublish in compilerBridge).value
+  (zincPublishLocal in compilerInterface).value
+  (zincPublishLocal in compilerBridge).value
   doScripted(
     (fullClasspath in zincScripted in Test).value,
     (scalaInstance in zincScripted).value,
@@ -438,7 +358,7 @@ def addSbtAlternateResolver(scriptedRoot: File) = {
          |  override def trigger = allRequirements
          |
          |  override lazy val projectSettings = Seq(resolvers += alternativeLocalResolver)
-         |  lazy val alternativeLocalResolver = Resolver.file("$altLocalRepoName", file("$altLocalRepoPath"))(Resolver.ivyStylePatterns)
+         |  lazy val alternativeLocalResolver = Resolver.file("$ZincAlternativeCacheName", file("${ZincAlternativeCacheDir.getAbsolutePath}"))(Resolver.ivyStylePatterns)
          |}
          |""".stripMargin
     )
