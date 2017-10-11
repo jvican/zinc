@@ -2,17 +2,7 @@ import Util._
 import Dependencies._
 import Scripted._
 
-val noPublish: Seq[Setting[_]] = List(
-  publish := {},
-  publishLocal := {},
-  publishArtifact in Compile := false,
-  publishArtifact in Test := false,
-  publishArtifact := false,
-  skip in publish := true,
-)
-
 lazy val zincRoot: Project = (project in file("."))
-// configs(Sxr.sxrConf).
   .aggregate(
     zinc,
     zincTesting,
@@ -31,7 +21,7 @@ lazy val zincRoot: Project = (project in file("."))
   )
   .settings(
     otherRootSettings,
-    noPublish,
+    noPublishSettings,
     name := "zinc Root",
     customCommands
   )
@@ -53,7 +43,7 @@ lazy val zinc = (project in file("zinc"))
 
 lazy val zincTesting = (project in internalPath / "zinc-testing")
   .settings(
-    noPublish,
+    noPublishSettings,
     name := "zinc Testing",
     libraryDependencies ++= Seq(scalaCheck, scalatest, junit, sjsonnewScalaJson.value)
   )
@@ -110,7 +100,7 @@ lazy val zincBenchmarks = (project in internalPath / "zinc-benchmarks")
   .dependsOn(compilerBridge, zincCore, zincTesting % Test)
   .enablePlugins(JmhPlugin)
   .settings(
-    noPublish,
+    noPublishSettings,
     name := "Benchmarks of Zinc and the compiler bridge",
     libraryDependencies ++= Seq(
       "org.eclipse.jgit" % "org.eclipse.jgit" % "4.6.0.201612231935-r",
@@ -298,7 +288,7 @@ lazy val zincClassfile = (project in internalPath / "zinc-classfile")
 lazy val zincScripted = (project in internalPath / "zinc-scripted")
   .dependsOn(zinc, zincIvyIntegration % "test->test")
   .settings(
-    noPublish,
+    noPublishSettings,
     name := "zinc Scripted",
   )
   .configure(addSbtUtilScripted)

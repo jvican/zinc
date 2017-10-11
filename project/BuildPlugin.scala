@@ -37,9 +37,10 @@ object BuildKeys {
   val ZincAlternativeCacheName = "alternative-local"
   val ZincAlternativeCacheDir: File = file(sys.props("user.home") + "/.ivy2/zinc-alternative")
 
+  // Defines several settings that are exposed to the projects definition in build.sbt
+  val noPublishSettings: Seq[Def.Setting[_]] = BuildDefaults.noPublishSettings
   val adaptOptionsForOldScalaVersions: Seq[Def.Setting[_]] =
     List(Keys.scalacOptions := BuildDefaults.zincScalacOptionsRedefinition.value)
-
   // Sets up mima settings for modules that have to be binary compatible with Zinc 1.0.0
   val mimaSettings: Seq[Def.Setting[_]] =
     List(MimaKeys.mimaPreviousArtifacts := BuildDefaults.zincPreviousArtifacts.value)
@@ -218,5 +219,14 @@ object BuildImplementation {
       logger.info(s"Publishing $module to local repo: $ZincAlternativeCacheName")
       Set(IvyActions.publish(module, newConfig, logger))
     }
+
+    val noPublishSettings: Seq[Def.Setting[_]] = List(
+      Keys.publish := {},
+      Keys.publishLocal := {},
+      Keys.publishArtifact in Compile := false,
+      Keys.publishArtifact in Test := false,
+      Keys.publishArtifact := false,
+      Keys.skip in Keys.publish := true,
+    )
   }
 }
