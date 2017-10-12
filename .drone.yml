@@ -44,6 +44,20 @@ pipeline:
       - ./bin/run-ci.sh
       - ${RUN_SCRIPTED}
 
+  publish:
+    image: scalacenter/scala:1.3
+    volumes:
+      - /scalacenter:/keys
+    when:
+      event: [ push, tag, deployment ]
+      status: success
+    commands:
+      # To know what we're releasing
+      - git log | head -n 20
+      - /usr/local/bin/setup_keys.sh
+      - /usr/local/bin/store_credentials.sh
+      - sbt releaseEarly
+
   rebuild_cache:
     image: appleboy/drone-sftp-cache
     when:
@@ -51,6 +65,7 @@ pipeline:
       matrix:
         JDK_HOME: /usr/share/jvm/jdk8 # Only cache the results produced by the tests step for jdk8
     secrets: [ sftp_cache_username, sftp_cache_private_key, sftp_cache_server, sftp_cache_path ]
+
     rebuild: true
     mount:
       - /drone/.ivy2/cache
