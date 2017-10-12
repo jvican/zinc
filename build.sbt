@@ -164,12 +164,12 @@ lazy val zincRoot: Project = (project in file("."))
         developers +=
           Developer("jvican", "Jorge Vicente Cantero", "@jvican", url("https://github.com/jvican")),
         scalafmtOnCompile in Sbt := false,
+        releaseEarlyWith := BintrayPublisher,
       )),
     minimalSettings,
     otherRootSettings,
     noPublish,
     name := "zinc Root",
-    customCommands
   )
 
 lazy val zinc = (project in file("zinc"))
@@ -612,16 +612,6 @@ def scriptedUnpublishedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
 
 lazy val publishAll = TaskKey[Unit]("publish-all")
 lazy val publishLauncher = TaskKey[Unit]("publish-launcher")
-
-def customCommands: Seq[Setting[_]] = Seq(
-  commands += Command.command("release") { state =>
-    "clean" :: // This is required since version number is generated in properties file.
-      "+compile" ::
-      "+publishSigned" ::
-      "reload" ::
-      state
-  }
-)
 
 inThisBuild(Seq(
   whitesourceProduct                   := "Lightbend Reactive Platform",
