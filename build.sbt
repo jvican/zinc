@@ -28,7 +28,8 @@ lazy val zincRoot: Project = (project in file("."))
     Scripted.scriptedUnpublished := BuildDefaults.zincOnlyScripted(zincScripted).evaluated,
     Scripted.scripted :=
       BuildDefaults.zincScripted(compilerBridge, compilerInterface, zincScripted).evaluated,
-    commands ++= List(BuildCommands.release, BuildCommands.runBenchmarks(zincScripted))
+    commands in Global ++=
+      BuildCommands.all(compilerBridge, compilerInterface, zincApiInfo, zincBenchmarks),
   )
 
 lazy val zinc = (project in file("zinc"))
@@ -44,7 +45,7 @@ lazy val zinc = (project in file("zinc"))
   )
 
 lazy val zincTesting = (project in internalPath / "zinc-testing")
-  .configure(addSbtLmCore, addSbtLmIvy, addTestDependencies, noPublish)
+  .configure(addSbtLmCore, addSbtLmIvy, noPublish)
   .settings(
     name := "zinc Testing",
     libraryDependencies ++= Seq(scalaCheck, scalatest, junit, sjsonnewScalaJson.value),
@@ -177,7 +178,7 @@ lazy val compilerInterface = (project in internalPath / "compiler-interface")
 
 // Compiler-side interface to compiler that is compiled against the compiler being used either in advance or on the fly.
 //   Includes API and Analyzer phases that extract source API and relationships.
-lazy val compilerBridge: Project = (project in internalPath / CompilerBridgeId)
+lazy val compilerBridge: Project = (project in internalPath / "compiler-bridge")
   .dependsOn(compilerInterface % "compile;test->test", zincApiInfo % "test->test")
   .settings(
     crossScalaVersions := bridgeScalaVersions,
@@ -194,7 +195,7 @@ lazy val compilerBridge: Project = (project in internalPath / CompilerBridgeId)
     // needed because we fork tests and tests are ran in parallel so we have multiple Scala
     // compiler instances that are memory hungry
     javaOptions in Test += "-Xmx1G",
-    sourcesForAllScalaVersionsSetting.flatMap(inCompileAndTest),
+    inCompileAndTest(unmanagedSourceDirectories ++= BuildDefaults.handleScalaSpecificSources.value),
     cleanSbtBridge := BuildDefaults.cleanSbtBridge.value,
     publishLocal := publishLocal.dependsOn(cleanSbtBridge).value,
     zincPublishLocalSettings,
@@ -203,7 +204,7 @@ lazy val compilerBridge: Project = (project in internalPath / CompilerBridgeId)
 
 // defines operations on the API of a source, including determining whether it has changed and converting it to a string
 //   and discovery of Projclasses and annotations
-lazy val zincApiInfo = (project in internalPath / ZincApiInfoId)
+lazy val zincApiInfo = (project in internalPath / "zinc-apiinfo")
   .dependsOn(compilerInterface, zincClassfile % "compile;test->test")
   .configure(addTestDependencies)
   .settings(
