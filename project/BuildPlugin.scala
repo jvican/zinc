@@ -2,12 +2,20 @@ import sbt._
 import sbt.Keys._
 import com.typesafe.sbt.SbtGit.git._
 import bintray.BintrayPlugin.autoImport._
+import ch.epfl.scala.sbt.release.ReleaseEarlyPlugin.autoImport._
 import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin.autoImport._
 import com.lucidchart.sbt.scalafmt.ScalafmtSbtPlugin.autoImport.Sbt
 import com.typesafe.tools.mima.plugin.MimaKeys._
 
 object BuildPlugin extends AutoPlugin {
-  override def requires = sbt.plugins.JvmPlugin
+  import sbt.plugins.JvmPlugin
+  import com.typesafe.sbt.GitPlugin
+  import com.typesafe.tools.mima.plugin.MimaPlugin
+  import ch.epfl.scala.sbt.release.ReleaseEarlyPlugin
+  import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin
+  override def requires =
+    JvmPlugin && ScalafmtCorePlugin && GitPlugin && ReleaseEarlyPlugin && MimaPlugin
+
   override def trigger = allRequirements
   val autoImport = BuildAutoImported
 
@@ -67,14 +75,13 @@ object BuildImplementation {
     scalafmtOnCompile := true,
     scalafmtVersion := "1.2.0",
     scalafmtOnCompile in Sbt := false,
+    releaseEarlyWith := BintrayPublisher,
     description := "Incremental compiler of Scala",
     // The rest of the sbt developers come from the Sbt Houserules plugin
     developers += BuildAutoImported.ScalaCenterMaintainer,
-    // TODO(jvican): Remove `scmInfo` and `homepage` when we have support for sbt-release-early
     homepage := Some(BuildAutoImported.ZincGitHomepage),
-    scmInfo := Some(ScmInfo(BuildAutoImported.ZincGitHomepage, "git@github.com:sbt/zinc.git")),
     version := {
-      val previous = version.value
+      val previous = Keys.version.value
       if (previous.contains("-SNAPSHOT")) baseVersion.value else previous
     },
   )
@@ -151,9 +158,6 @@ object BuildImplementation {
       }
     }
 
-    val release: Command =
-      Command.command("release")(st => "clean" :: "+compile" :: "+publishSigned" :: "reload" :: st)
-
     def runBenchmarks(benchmarkProject: Project): Command = {
       val dirPath = BuildAutoImported.benchmarksTestDir.getAbsolutePath
       val projectId = benchmarkProject.id
@@ -168,7 +172,7 @@ object BuildImplementation {
       val publishBridges = publishBridgesAndSet(bridge, interface, apiInfo)
       val publishBridgesTest = publishBridgesAndTest(bridge, interface, apiInfo)
       val runBench = runBenchmarks(bench)
-      List(crossTest, publishBridges, publishBridgesTest, runBench, release)
+      List(crossTest, publishBridges, publishBridgesTest, runBench)
     }
   }
 
