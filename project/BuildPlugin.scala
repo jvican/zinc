@@ -1,4 +1,4 @@
-import sbt.{ AutoPlugin, Compile, Def, Keys, Resolver, Test, TestFrameworks, Tests, URL }
+import sbt.{ AutoPlugin, Compile, Def, Keys, Resolver, Test, TestFrameworks, Tests, URL, Project }
 import com.typesafe.sbt.SbtGit.{ git => GitKeys }
 import bintray.BintrayPlugin.{ autoImport => BintrayKeys }
 import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin.{ autoImport => ScalafmtKeys }
@@ -38,7 +38,9 @@ object BuildKeys {
   val ZincAlternativeCacheDir: File = file(sys.props("user.home") + "/.ivy2/zinc-alternative")
 
   // Defines several settings that are exposed to the projects definition in build.sbt
-  val noPublishSettings: Seq[Def.Setting[_]] = BuildDefaults.noPublishSettings
+  private[this] val noPublishSettings: Seq[Def.Setting[_]] = BuildDefaults.noPublishSettings
+  def noPublish(p: Project): Project = p.settings(noPublishSettings)
+
   val adaptOptionsForOldScalaVersions: Seq[Def.Setting[_]] =
     List(Keys.scalacOptions := BuildDefaults.zincScalacOptionsRedefinition.value)
   // Sets up mima settings for modules that have to be binary compatible with Zinc 1.0.0
@@ -46,17 +48,28 @@ object BuildKeys {
     List(MimaKeys.mimaPreviousArtifacts := BuildDefaults.zincPreviousArtifacts.value)
 
   import sbt.{ TaskKey, taskKey }
+  val scriptedPublishAll = taskKey[Unit]("Publishes all the Zinc artifacts for scripted")
+  val cleanSbtBridge: TaskKey[Unit] = taskKey[Unit]("Cleans the sbt bridge.")
   val zincPublishLocal: TaskKey[Unit] =
     taskKey[Unit]("Publishes Zinc artifacts to a alternative local cache.")
   val zincPublishLocalSettings: Seq[Def.Setting[_]] = List(
     Keys.resolvers += BuildResolvers.AlternativeLocalResolver,
     zincPublishLocal := BuildDefaults.zincPublishLocal.value,
   )
+
+  val tearDownBenchmarkResources: TaskKey[Unit] = taskKey[Unit]("Remove benchmark resources.")
+  val benchmarksTestDir = sbt.IO.createTemporaryDirectory
+
+  val sourcesForAllScalaVersionsSetting: Seq[Def.Setting[_]] =
+    List(Keys.unmanagedSourceDirectories ++= BuildDefaults.handleScalaSpecificSources.value)
+  def inCompileAndTest(ss: Def.Setting[_]): Seq[Def.Setting[_]] =
+    List(Compile, Test).flatMap(sbt.inConfig(_)(ss))
 }
 
 object BuildImplementation {
   import sbt.{ ScmInfo }
   val buildSettings: Seq[Def.Setting[_]] = List(
+    Scripted.scriptedBufferLog := true,
     GitKeys.baseVersion := BuildKeys.baseVersion,
     GitKeys.gitUncommittedChanges := BuildDefaults.gitUncommitedChanges.value,
     BintrayKeys.bintrayPackage := "zinc",
@@ -149,11 +162,25 @@ object BuildImplementation {
           s"zincRoot/scripted" ::
           state
     }
+
+    val release: Command =
+      Command.command("release")(st => "clean" :: "+compile" :: "+publishSigned" :: "reload" :: st)
+
+    def runBenchmarks(benchmarkProject: Project): Command = {
+      val dirPath = BuildKeys.benchmarksTestDir.getAbsolutePath
+      val projectId = benchmarkProject.id
+      val runPreSetup = s"$projectId/run $dirPath"
+      val runBenchmark = s"$projectId/jmh:run -p _tempDir=$dirPath -prof gc"
+      val tearDownResources = s"$projectId/tearDownBenchmarkResources"
+      Command.command("runBenchmarks")(st => runPreSetup :: runBenchmark :: tearDownResources :: st)
+    }
+
     val all: List[Command] = List(crossTestBridges, publishBridgesAndSet, publishBridgesAndTest)
   }
 
   object BuildDefaults {
-    import sbt.Task
+    import BuildKeys.{ ZincAlternativeCacheName, ZincAlternativeCacheDir }
+    import sbt.{ Task, State, fileToRichFile, file, File, IO }
     private[this] val statusCommands = List(
       List("diff-index", "--cached", "HEAD"),
       List("diff-index", "HEAD"),
@@ -209,7 +236,6 @@ object BuildImplementation {
 
     val zincPublishLocal: Def.Initialize[Task[Unit]] = Def.task {
       import sbt.internal.librarymanagement._
-      import BuildKeys.ZincAlternativeCacheName
       val logger = Keys.streams.value.log
       val config = (Keys.publishLocalConfiguration).value
       val ivy = new IvySbt((Keys.ivyConfiguration.value))
@@ -228,5 +254,106 @@ object BuildImplementation {
       Keys.publishArtifact := false,
       Keys.skip in Keys.publish := true,
     )
+
+    private[this] def wrapIn(color: String, content: String): String = {
+      import sbt.internal.util.ConsoleAppender
+      if (!ConsoleAppender.formatEnabledInEnv) content
+      else color + content + scala.Console.RESET
+    }
+
+    val cleanSbtBridge: Def.Initialize[Task[Unit]] = Def.task {
+      val sbtV = Keys.sbtVersion.value
+      val sbtOrg = "org.scala-sbt"
+      val sbtScalaVersion = "2.10.6"
+      val bridgeVersion = Keys.version.value
+      val scalaV = Keys.scalaVersion.value
+
+      // Assumes that JDK version is the same than the one that publishes the bridge
+      val classVersion = System.getProperty("java.class.version")
+
+      val home = System.getProperty("user.home")
+      val org = Keys.organization.value
+      val artifact = Keys.moduleName.value
+      val artifactName = s"$org-$artifact-$bridgeVersion-bin_${scalaV}__$classVersion"
+
+      val targetsToDelete = List(
+        // We cannot use the target key, it's not scoped in `ThisBuild` nor `Global`.
+        (Keys.baseDirectory in sbt.ThisBuild).value / "target" / "zinc-components",
+        file(home) / ".ivy2/cache" / sbtOrg / artifactName,
+        file(home) / ".ivy2/local" / sbtOrg / artifactName,
+        file(home) / ".sbt/boot" / s"scala-$sbtScalaVersion" / sbtOrg / "sbt" / sbtV / artifactName
+      )
+
+      val logger = Keys.streams.value.log
+      logger.info(wrapIn(scala.Console.BOLD, "Cleaning stale compiler bridges:"))
+      targetsToDelete.foreach { target =>
+        IO.delete(target)
+        logger.info(s"${wrapIn(scala.Console.GREEN, "  ✓ ")}${target.getAbsolutePath}")
+      }
+    }
+
+    private[this] val scalaPartialVersion =
+      Def.setting(CrossVersion.partialVersion(Keys.scalaVersion.value))
+    val handleScalaSpecificSources: Def.Initialize[List[File]] = Def.setting {
+      val source = Keys.scalaSource.value
+      scalaPartialVersion.value.collect {
+        case (2, y) if y == 10 => new File(source.getPath + "_2.10")
+        case (2, y) if y >= 11 => new File(source.getPath + "_2.11+")
+      }.toList
+    }
+
+    import sbt.{ InputTask }
+    import Scripted.{ scriptedSource, scriptedParser, scriptedBufferLog, scriptedPrescripted }
+    def zincScripted(bridgeRef: Project,
+                     interfaceRef: Project,
+                     scriptedRef: Project): Def.Initialize[InputTask[Unit]] = Def.inputTask {
+      val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
+      // We first publish all the zinc modules
+      BuildKeys.scriptedPublishAll.value
+
+      val source = scriptedSource.value
+      val logged = scriptedBufferLog.value
+      val hook = scriptedPrescripted.value
+
+      // Publish the interface and the bridge for scripted to resolve them correctly
+      (BuildKeys.zincPublishLocal in interfaceRef).value
+      (BuildKeys.zincPublishLocal in bridgeRef).value
+
+      val scriptedClasspath = (Keys.fullClasspath in scriptedRef in Test).value
+      val instance = (Keys.scalaInstance in scriptedRef in Test).value
+      Scripted.doScripted(scriptedClasspath, instance, source, result, logged, hook)
+    }
+
+    def zincOnlyScripted(scriptedRef: Project): Def.Initialize[InputTask[Unit]] = Def.inputTask {
+      val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
+      val scriptedClasspath = (Keys.fullClasspath in scriptedRef in Test).value
+      val instance = (Keys.scalaInstance in scriptedRef in Test).value
+      val source = scriptedSource.value
+      val logged = scriptedBufferLog.value
+      val hook = scriptedPrescripted.value
+      Scripted.doScripted(scriptedClasspath, instance, source, result, logged, hook)
+    }
+
+    private[this] val ZincAlternativeResolverPlugin = s"""
+       |import sbt._
+       |import Keys._
+       |
+       |object AddResolverPlugin extends AutoPlugin {
+       |  override def requires = sbt.plugins.JvmPlugin
+       |  override def trigger = allRequirements
+       |
+       |  override lazy val projectSettings = Seq(resolvers += alternativeLocalResolver)
+       |  lazy val alternativeLocalResolver = Resolver.file("$ZincAlternativeCacheName", file("${ZincAlternativeCacheDir.getAbsolutePath}"))(Resolver.ivyStylePatterns)
+       |}
+       |""".stripMargin
+
+    def addSbtAlternateResolver(scriptedRoot: File): Unit = {
+      val resolver = scriptedRoot / "project" / "AddResolverPlugin.scala"
+      if (!resolver.exists) IO.write(resolver, ZincAlternativeResolverPlugin)
+      else ()
+    }
+
+    val tearDownBenchmarkResources: Def.Initialize[Task[Unit]] =
+      Def.task(IO.delete(BuildKeys.benchmarksTestDir))
   }
 }
