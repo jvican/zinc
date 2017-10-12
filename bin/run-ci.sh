@@ -11,6 +11,8 @@ sbt -Dfile.encoding=UTF-8 \
   scalafmt::test \
   test:scalafmt::test \
   whitesourceCheckPolicies \
+  ++2.10.11 \
+  compilerInterface/compile \
   zincRoot/test:compile \
   crossTestBridges \
   "publishBridgesAndSet $SCALA_VERSION" \

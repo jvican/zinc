@@ -255,7 +255,7 @@ lazy val zincBenchmarks = (project in internalPath / "zinc-benchmarks")
     ),
     scalaVersion := scala212,
     crossScalaVersions := Seq(scala211, scala212),
-    javaOptions in Test += "-Xmx600M -Xms600M",
+    javaOptions in Test += "-Xmx600M -Xms600M"
   )
 
 lazy val zincIvyIntegration = (project in internalPath / "zinc-ivy-integration")
@@ -622,12 +622,3 @@ def customCommands: Seq[Setting[_]] = Seq(
       state
   }
 )
-
-inThisBuild(Seq(
-  whitesourceProduct                   := "Lightbend Reactive Platform",
-  whitesourceAggregateProjectName      := "sbt-zinc-master",
-  whitesourceAggregateProjectToken     := "4b57f35176864c6397b872277d51bc27b89503de0f1742b8bc4dfa2e33b95c5c",
-  whitesourceIgnoredScopes             += "scalafmt",
-  whitesourceFailOnError               := sys.env.contains("WHITESOURCE_PASSWORD"), // fail if pwd is present
-  whitesourceForceCheckAllDependencies := true,
-))
