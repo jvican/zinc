@@ -1,9 +1,10 @@
-import sbt.{ AutoPlugin, Compile, Def, Keys, Resolver, Test, TestFrameworks, Tests, URL, Project }
-import com.typesafe.sbt.SbtGit.{ git => GitKeys }
-import bintray.BintrayPlugin.{ autoImport => BintrayKeys }
-import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin.{ autoImport => ScalafmtKeys }
+import sbt._
+import sbt.Keys._
+import com.typesafe.sbt.SbtGit.git._
+import bintray.BintrayPlugin.autoImport._
+import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin.autoImport._
 import com.lucidchart.sbt.scalafmt.ScalafmtSbtPlugin.autoImport.Sbt
-import com.typesafe.tools.mima.plugin.MimaKeys
+import com.typesafe.tools.mima.plugin.MimaKeys._
 
 object BuildPlugin extends AutoPlugin {
   override def requires = sbt.plugins.JvmPlugin
@@ -15,8 +16,6 @@ object BuildPlugin extends AutoPlugin {
 }
 
 trait BuildKeys {
-  import sbt.{ TaskKey, taskKey }
-
   val tearDownBenchmarkResources: TaskKey[Unit] = taskKey[Unit]("Remove benchmark resources.")
   val scriptedPublishAll = taskKey[Unit]("Publishes all the Zinc artifacts for scripted")
   val cleanSbtBridge: TaskKey[Unit] = taskKey[Unit]("Cleans the sbt bridge.")
@@ -25,7 +24,6 @@ trait BuildKeys {
 }
 
 object BuildAutoImported extends BuildKeys {
-  import sbt.{ file, File, Developer, url }
   import BuildImplementation.{ BuildDefaults, BuildResolvers }
 
   val baseVersion: String = "1.1.0-SNAPSHOT"
@@ -47,11 +45,11 @@ object BuildAutoImported extends BuildKeys {
 
   // Sets up mima settings for modules that have to be binary compatible with Zinc 1.0.0
   val mimaSettings: Seq[Def.Setting[_]] =
-    List(MimaKeys.mimaPreviousArtifacts := BuildDefaults.zincPreviousArtifacts.value)
+    List(mimaPreviousArtifacts := BuildDefaults.zincPreviousArtifacts.value)
   val adaptOptionsForOldScalaVersions: Seq[Def.Setting[_]] =
-    List(Keys.scalacOptions := BuildDefaults.zincScalacOptionsRedefinition.value)
+    List(scalacOptions := BuildDefaults.zincScalacOptionsRedefinition.value)
   val zincPublishLocalSettings: Seq[Def.Setting[_]] = List(
-    Keys.resolvers += BuildResolvers.AlternativeLocalResolver,
+    resolvers += BuildResolvers.AlternativeLocalResolver,
     zincPublishLocal := BuildDefaults.zincPublishLocal.value,
   )
 
@@ -61,38 +59,37 @@ object BuildAutoImported extends BuildKeys {
 }
 
 object BuildImplementation {
-  import sbt.{ ScmInfo }
   val buildSettings: Seq[Def.Setting[_]] = List(
     Scripted.scriptedBufferLog := true,
-    GitKeys.baseVersion := BuildAutoImported.baseVersion,
-    GitKeys.gitUncommittedChanges := BuildDefaults.gitUncommitedChanges.value,
-    BintrayKeys.bintrayPackage := "zinc",
-    ScalafmtKeys.scalafmtOnCompile := true,
-    ScalafmtKeys.scalafmtVersion := "1.2.0",
-    ScalafmtKeys.scalafmtOnCompile in Sbt := false,
-    Keys.description := "Incremental compiler of Scala",
+    baseVersion := BuildAutoImported.baseVersion,
+    gitUncommittedChanges := BuildDefaults.gitUncommitedChanges.value,
+    bintrayPackage := "zinc",
+    scalafmtOnCompile := true,
+    scalafmtVersion := "1.2.0",
+    scalafmtOnCompile in Sbt := false,
+    description := "Incremental compiler of Scala",
     // The rest of the sbt developers come from the Sbt Houserules plugin
-    Keys.developers += BuildAutoImported.ScalaCenterMaintainer,
+    developers += BuildAutoImported.ScalaCenterMaintainer,
     // TODO(jvican): Remove `scmInfo` and `homepage` when we have support for sbt-release-early
-    Keys.homepage := Some(BuildAutoImported.ZincGitHomepage),
-    Keys.scmInfo := Some(ScmInfo(BuildAutoImported.ZincGitHomepage, "git@github.com:sbt/zinc.git")),
-    Keys.version := {
-      val previous = Keys.version.value
-      if (previous.contains("-SNAPSHOT")) GitKeys.baseVersion.value else previous
+    homepage := Some(BuildAutoImported.ZincGitHomepage),
+    scmInfo := Some(ScmInfo(BuildAutoImported.ZincGitHomepage, "git@github.com:sbt/zinc.git")),
+    version := {
+      val previous = version.value
+      if (previous.contains("-SNAPSHOT")) baseVersion.value else previous
     },
   )
 
   val projectSettings: Seq[Def.Setting[_]] = List(
     // publishArtifact in packageDoc := false,
     // concurrentRestrictions in Global += Util.testExclusiveRestriction,
-    Keys.scalaVersion := Dependencies.scala212,
-    Keys.resolvers ++= BuildResolvers.all,
-    Keys.resolvers ~= BuildResolvers.removeRepeatedResolvers,
-    Keys.testOptions += Tests.Argument(TestFrameworks.ScalaCheck, "-w", "1"),
-    Keys.javacOptions in Compile ++= Seq("-Xlint", "-Xlint:-serial"),
-    Keys.crossScalaVersions := Seq(Dependencies.scala211, Dependencies.scala212),
-    Keys.publishArtifact in Test := false,
-    Keys.scalacOptions += "-YdisableFlatCpCaching"
+    scalaVersion := Dependencies.scala212,
+    resolvers ++= BuildResolvers.all,
+    resolvers ~= BuildResolvers.removeRepeatedResolvers,
+    testOptions += Tests.Argument(TestFrameworks.ScalaCheck, "-w", "1"),
+    javacOptions in Compile ++= Seq("-Xlint", "-Xlint:-serial"),
+    crossScalaVersions := Seq(Dependencies.scala211, Dependencies.scala212),
+    publishArtifact in Test := false,
+    scalacOptions += "-YdisableFlatCpCaching"
   )
 
   object BuildResolvers {
@@ -188,7 +185,7 @@ object BuildImplementation {
     // https://github.com/sbt/sbt-git/issues/109
     val gitUncommitedChanges: Def.Initialize[Boolean] = Def.setting {
       // Workaround from https://github.com/sbt/sbt-git/issues/92#issuecomment-161853239
-      val dir = Keys.baseDirectory.value
+      val dir = baseDirectory.value
       // can't use git.runner.value because it's a task
       val runner = com.typesafe.sbt.git.ConsoleGitRunner
       // sbt/zinc#334 Seemingly "git status" resets some stale metadata.
@@ -197,7 +194,7 @@ object BuildImplementation {
         val res = runner(c: _*)(dir, com.typesafe.sbt.git.NullLogger)
         if (res.isEmpty) Nil else List(c -> res)
       }
-      val logger = Keys.sLog.value
+      val logger = sLog.value
       val areUncommited = uncommittedChanges.nonEmpty
       if (areUncommited) {
         uncommittedChanges.foreach {
@@ -210,8 +207,8 @@ object BuildImplementation {
 
     import sbt.{ CrossVersion, ModuleID, stringToOrganization }
     val zincPreviousArtifacts: Def.Initialize[Set[ModuleID]] = Def.setting {
-      val zincModule = (Keys.organization.value % Keys.moduleName.value % "1.0.0")
-        .cross(if (Keys.crossPaths.value) CrossVersion.binary else CrossVersion.disabled)
+      val zincModule = (organization.value % moduleName.value % "1.0.0")
+        .cross(if (crossPaths.value) CrossVersion.binary else CrossVersion.disabled)
       Set(zincModule)
     }
 
@@ -224,8 +221,8 @@ object BuildImplementation {
     )
 
     val zincScalacOptionsRedefinition: Def.Initialize[Task[Seq[String]]] = Def.task {
-      val old = Keys.scalacOptions.value
-      Keys.scalaBinaryVersion.value match {
+      val old = scalacOptions.value
+      scalaBinaryVersion.value match {
         case v if v == "2.12" || v == "2.13" => old
         case _                               => old.filterNot(toFilterInOldScala)
       }
@@ -233,23 +230,23 @@ object BuildImplementation {
 
     val zincPublishLocal: Def.Initialize[Task[Unit]] = Def.task {
       import sbt.internal.librarymanagement._
-      val logger = Keys.streams.value.log
-      val config = (Keys.publishLocalConfiguration).value
-      val ivy = new IvySbt((Keys.ivyConfiguration.value))
-      val moduleSettings = (Keys.moduleSettings).value
-      val module = new ivy.Module(moduleSettings)
+      val logger = streams.value.log
+      val config = (publishLocalConfiguration).value
+      val ivy = new IvySbt((ivyConfiguration.value))
+      val modSettings = (moduleSettings).value
+      val module = new ivy.Module(modSettings)
       val newConfig = config.withResolverName(ZincAlternativeCacheName).withOverwrite(false)
       logger.info(s"Publishing $module to local repo: $ZincAlternativeCacheName")
       Set(IvyActions.publish(module, newConfig, logger))
     }
 
     val noPublishSettings: Seq[Def.Setting[_]] = List(
-      Keys.publish := {},
-      Keys.publishLocal := {},
-      Keys.publishArtifact in Compile := false,
-      Keys.publishArtifact in Test := false,
-      Keys.publishArtifact := false,
-      Keys.skip in Keys.publish := true,
+      publish := {},
+      publishLocal := {},
+      publishArtifact in Compile := false,
+      publishArtifact in Test := false,
+      publishArtifact := false,
+      skip in publish := true,
     )
 
     private[this] def wrapIn(color: String, content: String): String = {
@@ -259,29 +256,29 @@ object BuildImplementation {
     }
 
     val cleanSbtBridge: Def.Initialize[Task[Unit]] = Def.task {
-      val sbtV = Keys.sbtVersion.value
+      val sbtV = sbtVersion.value
       val sbtOrg = "org.scala-sbt"
       val sbtScalaVersion = "2.10.6"
-      val bridgeVersion = Keys.version.value
-      val scalaV = Keys.scalaVersion.value
+      val bridgeVersion = version.value
+      val scalaV = scalaVersion.value
 
       // Assumes that JDK version is the same than the one that publishes the bridge
       val classVersion = System.getProperty("java.class.version")
 
       val home = System.getProperty("user.home")
-      val org = Keys.organization.value
-      val artifact = Keys.moduleName.value
+      val org = organization.value
+      val artifact = moduleName.value
       val artifactName = s"$org-$artifact-$bridgeVersion-bin_${scalaV}__$classVersion"
 
       val targetsToDelete = List(
         // We cannot use the target key, it's not scoped in `ThisBuild` nor `Global`.
-        (Keys.baseDirectory in sbt.ThisBuild).value / "target" / "zinc-components",
+        (baseDirectory in sbt.ThisBuild).value / "target" / "zinc-components",
         file(home) / ".ivy2/cache" / sbtOrg / artifactName,
         file(home) / ".ivy2/local" / sbtOrg / artifactName,
         file(home) / ".sbt/boot" / s"scala-$sbtScalaVersion" / sbtOrg / "sbt" / sbtV / artifactName
       )
 
-      val logger = Keys.streams.value.log
+      val logger = streams.value.log
       logger.info(wrapIn(scala.Console.BOLD, "Cleaning stale compiler bridges:"))
       targetsToDelete.foreach { target =>
         IO.delete(target)
@@ -290,9 +287,9 @@ object BuildImplementation {
     }
 
     private[this] val scalaPartialVersion =
-      Def.setting(CrossVersion.partialVersion(Keys.scalaVersion.value))
+      Def.setting(CrossVersion.partialVersion(scalaVersion.value))
     val handleScalaSpecificSources: Def.Initialize[List[File]] = Def.setting {
-      val source = Keys.scalaSource.value
+      val source = scalaSource.value
       scalaPartialVersion.value.collect {
         case (2, y) if y == 10 => new File(source.getPath + "_2.10")
         case (2, y) if y >= 11 => new File(source.getPath + "_2.11+")
@@ -316,15 +313,15 @@ object BuildImplementation {
       (BuildAutoImported.zincPublishLocal in interfaceRef).value
       (BuildAutoImported.zincPublishLocal in bridgeRef).value
 
-      val scriptedClasspath = (Keys.fullClasspath in scriptedRef in Test).value
-      val instance = (Keys.scalaInstance in scriptedRef).value
+      val scriptedClasspath = (fullClasspath in scriptedRef in Test).value
+      val instance = (scalaInstance in scriptedRef).value
       Scripted.doScripted(scriptedClasspath, instance, source, result, logged, hook)
     }
 
     def zincOnlyScripted(scriptedRef: Project): Def.Initialize[InputTask[Unit]] = Def.inputTask {
       val result = scriptedSource(dir => (s: State) => scriptedParser(dir)).parsed
-      val scriptedClasspath = (Keys.fullClasspath in scriptedRef in Test).value
-      val instance = (Keys.scalaInstance in scriptedRef).value
+      val scriptedClasspath = (fullClasspath in scriptedRef in Test).value
+      val instance = (scalaInstance in scriptedRef).value
       val source = scriptedSource.value
       val logged = scriptedBufferLog.value
       val hook = scriptedPrescripted.value
