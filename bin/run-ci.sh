@@ -22,7 +22,7 @@ sbt -Dfile.encoding=UTF-8 \
   ++2.10.11 \
   compilerInterface/compile \
   zincRoot/test:compile \
-  +compilerBridge/publishLocal \
+  +compilerBridge/cachedPublishLocal \
   +compilerBridge/test \
   ++$SCALA_VERSION \
   zincRoot/test \
