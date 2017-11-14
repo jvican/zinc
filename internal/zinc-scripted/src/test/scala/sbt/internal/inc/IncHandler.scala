@@ -1,3 +1,10 @@
+/*
+ * Zinc - The incremental compiler for Scala.
+ * Copyright 2011 - 2017, Lightbend, Inc.
+ * Copyright 2008 - 2010, Mark Harrah
+ * This software is released under the terms written in LICENSE.
+ */
+
 package sbt
 package internal
 package inc
@@ -34,6 +41,7 @@ import java.util.{ Optional, Properties }
 import sbt.internal.inc.classpath.{ ClassLoaderCache, ClasspathUtilities }
 import sbt.internal.scripted.{ StatementHandler, TestFailed }
 import sbt.internal.util.ManagedLogger
+import sbt.librarymanagement.Resolver
 import sjsonnew.support.scalajson.unsafe.{ Converter, Parser => JsonParser }
 
 import scala.{ PartialFunction => ?=> }

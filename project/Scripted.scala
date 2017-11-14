@@ -9,9 +9,6 @@ import scala.language.reflectiveCalls
 object Scripted {
   def scriptedPath = file("scripted")
   lazy val scripted = InputKey[Unit]("scripted")
-  lazy val scriptedUnpublished = InputKey[Unit](
-    "scripted-unpublished",
-    "Execute scripted without publishing SBT first. Saves you some time when only your test has changed.")
   lazy val scriptedSource = SettingKey[File]("scripted-source")
   lazy val scriptedPrescripted = TaskKey[File => Unit]("scripted-prescripted")
   lazy val scriptedBufferLog = SettingKey[Boolean]("scripted-buffer-log")
@@ -82,8 +79,7 @@ object Scripted {
     val bridgeClass = Class.forName("sbt.internal.inc.IncScriptedRunner", true, loader)
     val bridge = bridgeClass.newInstance.asInstanceOf[IncScriptedRunner]
     // val launcherVmOptions = Array("-XX:MaxPermSize=256M") // increased after a failure in scripted source-dependencies/macro
-    try {
-      bridge.run(sourcePath, bufferLog, args.toArray)
-    } catch { case ite: java.lang.reflect.InvocationTargetException => throw ite.getCause }
+    try bridge.run(sourcePath, bufferLog, args.toArray)
+    catch { case ite: java.lang.reflect.InvocationTargetException => throw ite.getCause }
   }
 }

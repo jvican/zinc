@@ -1,3 +1,10 @@
+/*
+ * Zinc - The incremental compiler for Scala.
+ * Copyright 2011 - 2017, Lightbend, Inc.
+ * Copyright 2008 - 2010, Mark Harrah
+ * This software is released under the terms written in LICENSE.
+ */
+
 package sbt.internal.inc
 
 import java.io.File
@@ -19,14 +26,26 @@ abstract class BridgeProviderSpecification extends UnitSpec {
   def currentTarget: File = currentBase / "target" / "ivyhome"
   def currentManaged: File = currentBase / "target" / "lib_managed"
 
-  val resolvers = Array(ZincComponentCompiler.LocalResolver, Resolver.mavenCentral)
-  private val ivyConfiguration =
+  private final val ZincScriptedLocal =
+    s"$${user.dir}/.ivy2/zinc-scripted-local/${Resolver.localBasePattern}"
+  private final val ScriptedResolver: Resolver = {
+    import sbt.librarymanagement.{ FileRepository, Patterns }
+    val toUse = Vector(ZincScriptedLocal)
+    val ivyPattern = Patterns().withIsMavenCompatible(false)
+    val finalPatterns = ivyPattern
+      .withIvyPatterns(toUse)
+      .withArtifactPatterns(toUse)
+      .withSkipConsistencyCheck(true)
+    FileRepository("zinc-scripted-local", Resolver.defaultFileConfiguration, finalPatterns)
+  }
+
+  // Use the scripted resolver to make sure that we don't mistakenly get user local jars
+  val resolvers = Array(ScriptedResolver, Resolver.mavenCentral)
+  private def ivyConfiguration =
     getDefaultConfiguration(currentBase, currentTarget, resolvers, log)
 
-  def secondaryCacheDirectory: File = {
-    val target = file("target").getAbsoluteFile
-    target / "zinc-components"
-  }
+  // Place where we store the compiled and installed bridges for every Scala version
+  def secondaryCacheDirectory: File = file("target").getAbsoluteFile./("zinc-components")
 
   def getZincProvider(targetDir: File, log: Logger): CompilerBridgeProvider = {
     val lock = ZincComponentCompiler.getDefaultLock
