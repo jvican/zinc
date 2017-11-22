@@ -8,6 +8,8 @@ def internalPath = file("internal")
 lazy val compilerBridgeScalaVersions = List(scala212, scala213, scala211, scala210)
 lazy val compilerBridgeTestScalaVersions = List(scala212, scala211, scala210)
 
+val ourDynVerInstance = settingKey[sbtdynver.DynVer]("")
+
 def mimaSettings: Seq[Setting[_]] = Seq(
   mimaPreviousArtifacts := Set(
     "1.0.0", "1.0.1", "1.0.2", "1.0.3", "1.0.4", "1.0.5",
@@ -169,7 +171,11 @@ lazy val zincRoot: Project = (project in file("."))
          publishDocAndSourceArtifact.value,
         publishArtifact in (Compile, Keys.packageSrc) :=
          publishDocAndSourceArtifact.value,
-        cachedPublishLocal := cachedPublishLocalImpl.value
+        cachedPublishLocal := cachedPublishLocalImpl.value,
+        ourDynVerInstance := sbtdynver.DynVer(Some(baseDirectory.value)),
+        dynver := ourDynVerInstance.value.version(new java.util.Date),
+        dynverGitDescribeOutput :=
+          ourDynVerInstance.value.getGitDescribeOutput(dynverCurrentDate.value),
       )),
     minimalSettings,
     otherRootSettings,
