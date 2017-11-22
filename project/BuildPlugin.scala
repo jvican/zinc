@@ -2,6 +2,7 @@ import sbt._
 import sbt.Keys._
 import com.typesafe.sbt.SbtGit.git._
 import bintray.BintrayPlugin.autoImport._
+import sbtdynver.DynVerPlugin.autoImport._
 import ch.epfl.scala.sbt.release.ReleaseEarlyPlugin.autoImport._
 import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin.autoImport._
 import com.lucidchart.sbt.scalafmt.ScalafmtSbtPlugin.autoImport.Sbt
@@ -9,13 +10,14 @@ import com.typesafe.tools.mima.plugin.MimaKeys._
 import sbt.librarymanagement.ivy.{ InlineIvyConfiguration, IvyDependencyResolution }
 
 object BuildPlugin extends AutoPlugin {
+  import sbtdynver.DynVerPlugin
   import sbt.plugins.JvmPlugin
   import com.typesafe.sbt.GitPlugin
   import com.typesafe.tools.mima.plugin.MimaPlugin
   import ch.epfl.scala.sbt.release.ReleaseEarlyPlugin
   import com.lucidchart.sbt.scalafmt.ScalafmtCorePlugin
   override def requires =
-    JvmPlugin && ScalafmtCorePlugin && GitPlugin && ReleaseEarlyPlugin && MimaPlugin
+    JvmPlugin && ScalafmtCorePlugin && GitPlugin && ReleaseEarlyPlugin && MimaPlugin && DynVerPlugin
 
   override def trigger = allRequirements
   val autoImport = BuildAutoImported
@@ -28,6 +30,7 @@ trait BuildKeys {
   val tearDownBenchmarkResources: TaskKey[Unit] = taskKey[Unit]("Remove benchmark resources.")
   val scriptedPublish = taskKey[Unit]("Publishes all the Zinc artifacts for scripted")
   val cachedPublishLocal = taskKey[Unit]("Publishes a project if it hasn't been published before.")
+  val ourDynVerInstance = settingKey[sbtdynver.DynVer]("")
 }
 
 object BuildAutoImported extends BuildKeys {
@@ -59,6 +62,7 @@ object BuildAutoImported extends BuildKeys {
 
 object BuildImplementation {
   import sbt.{ fileToRichFile, file, File, ThisBuild, Tags }
+  import sbtdynver.DynVer
 
   val buildSettings: Seq[Def.Setting[_]] = List(
     Scripted.scriptedBufferLog := true,
@@ -77,6 +81,10 @@ object BuildImplementation {
       val previous = version.value
       if (previous.contains("-SNAPSHOT")) baseVersion.value else previous
     },
+    BuildAutoImported.ourDynVerInstance := DynVer(Some(baseDirectory.value)),
+    dynver := BuildAutoImported.ourDynVerInstance.value.version(new java.util.Date),
+    dynverGitDescribeOutput :=
+      BuildAutoImported.ourDynVerInstance.value.getGitDescribeOutput(dynverCurrentDate.value),
   )
 
   val projectSettings: Seq[Def.Setting[_]] = List(
@@ -280,9 +288,9 @@ object BuildImplementation {
                 val baseDirectory = Keys.baseDirectory.value.toPath()
                 val sourceDirs = sourceDirectories.in(currentConfig).value
                 val resourceDirs = resourceDirectories.in(currentConfig).value
+
                 val allDirs = sourceDirs ++ resourceDirs
                 val files = allDirs.flatMap(sbt.Path.allSubpaths(_)).toIterator.map(_._1)
-
                 val allJars = resolved.filter(_.getPath().endsWith(".jar"))
                 val lastPublicationTime = allJars.map(_.lastModified()).max
                 val invalidatedSources = files.filter(_.lastModified() >= lastPublicationTime)
