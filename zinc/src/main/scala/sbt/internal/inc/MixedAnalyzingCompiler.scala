@@ -116,9 +116,6 @@ final class MixedAnalyzingCompiler(
     } else {
       compileScala(); compileJava()
     }
-
-    if (javaSrcs.size + scalaSrcs.size > 0)
-      log.info("Done compiling.")
   }
 
   private[this] def outputDirectories(output: Output): Seq[File] = {
@@ -137,6 +134,7 @@ final class MixedAnalyzingCompiler(
     result
   }
 
+  private val workingDirectory: File = new File(sys.props("user.dir"))
   private[this] def logInputs(
       log: Logger,
       javaCount: Int,
@@ -147,8 +145,14 @@ final class MixedAnalyzingCompiler(
     val javaMsg = Analysis.counted("Java source", "", "s", javaCount)
     val combined = scalaMsg ++ javaMsg
     if (combined.nonEmpty) {
-      val targets = outputDirs.map(_.getAbsolutePath).mkString(",")
-      log.info(combined.mkString("Compiling ", " and ", s" to $targets ..."))
+      val basePath = workingDirectory.toPath()
+      val targetPaths = outputDirs.map { p =>
+        val targetPath = p.toPath()
+        if (!targetPath.toString.startsWith(basePath.toString)) targetPath.toAbsolutePath()
+        else basePath.relativize(targetPath)
+      }
+      val targets = targetPaths.map(p => s"'${p.toString()}'")
+      log.info(combined.mkString("Compiling ", " and ", s" to ${targets.mkString(",")}..."))
     }
   }
 
