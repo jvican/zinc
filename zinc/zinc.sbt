@@ -31,7 +31,7 @@ def projectSettings(ext: String) =
       IO.copyFile((packageBin in Compile).value, target)
       Seq(target)
     }
-  ) ++ relaxNon212
+  ) ++ relaxNon212 ++ OurStuff.extraCommonSettings
 
 val resGenFile = file("resGenerator")
 

@@ -8,8 +8,6 @@ def internalPath = file("internal")
 lazy val compilerBridgeScalaVersions = List(scala212, scala213, scala211, scala210)
 lazy val compilerBridgeTestScalaVersions = List(scala212, scala211, scala210)
 
-val ourDynVerInstance = settingKey[sbtdynver.DynVer]("")
-
 def mimaSettings: Seq[Setting[_]] = Seq(
   mimaPreviousArtifacts := Set(
     "1.0.0", "1.0.1", "1.0.2", "1.0.3", "1.0.4", "1.0.5",
@@ -29,7 +27,6 @@ def commonSettings: Seq[Setting[_]] = Seq(
   resolvers += Resolver.url(
     "bintray-sbt-ivy-snapshots",
     new URL("https://dl.bintray.com/sbt/ivy-snapshots/"))(Resolver.ivyStylePatterns),
-  resolvers += ScriptedResolver,
   // concurrentRestrictions in Global += Util.testExclusiveRestriction,
   testOptions += Tests.Argument(TestFrameworks.ScalaCheck, "-w", "1"),
   javacOptions in compile ++= Seq("-Xlint", "-Xlint:-serial"),
@@ -40,7 +37,7 @@ def commonSettings: Seq[Setting[_]] = Seq(
     "-YdisableFlatCpCaching",
     "-target:jvm-1.8",
   )
-)
+) ++ OurStuff.extraCommonSettings
 
 def relaxNon212: Seq[Setting[_]] = Seq(
   scalacOptions := {
@@ -167,22 +164,13 @@ lazy val zincRoot: Project = (project in file("."))
         developers +=
           Developer("jvican", "Jorge Vicente Cantero", "@jvican", url("https://github.com/jvican")),
         scalafmtOnCompile in Sbt := false,
-        releaseEarlyWith := BintrayPublisher,
-        publishArtifact in (Compile, Keys.packageDoc) :=
-         publishDocAndSourceArtifact.value,
-        publishArtifact in (Compile, Keys.packageSrc) :=
-         publishDocAndSourceArtifact.value,
-        cachedPublishLocal := cachedPublishLocalImpl.value,
-        ourDynVerInstance := sbtdynver.DynVer(Some(baseDirectory.value)),
-        dynver := ourDynVerInstance.value.version(new java.util.Date),
-        dynverGitDescribeOutput :=
-          ourDynVerInstance.value.getGitDescribeOutput(dynverCurrentDate.value),
-      )),
+      ) ++ OurStuff.extraBuildSettings),
     minimalSettings,
     otherRootSettings,
     noPublish,
-    scriptedPublish := cachedPublishLocalImpl.all(ScopeFilter(inAnyProject)).value,
     name := "zinc Root",
+    customCommands,
+    OurStuff.extraRootSettings
   )
 
 lazy val zinc = (project in file("zinc"))
@@ -269,6 +257,7 @@ lazy val zincBenchmarks = (project in internalPath / "zinc-benchmarks")
     scalaVersion := scala212,
     crossScalaVersions := Seq(scala211, scala212),
     javaOptions in Test += "-Xmx600M -Xms600M",
+    OurStuff.extraCommonSettings
   )
 
 lazy val zincIvyIntegration = (project in internalPath / "zinc-ivy-integration")
@@ -356,8 +345,7 @@ lazy val compilerInterface = (project in internalPath / "compiler-interface")
   )
   .configure(addSbtUtilInterface)
 
-val scriptedPublish = taskKey[Unit]("Publishes all the Zinc artifacts for scripted")
-val cachedPublishLocal = taskKey[Unit]("Publishes a project if it hasn't been published before.")
+val cleanSbtBridge = taskKey[Unit]("Cleans the sbt bridge.")
 
 def wrapIn(color: String, content: String): String = {
   import sbt.internal.util.ConsoleAppender
@@ -398,10 +386,38 @@ lazy val compilerBridge: Project = (project in internalPath / "compiler-bridge")
         case _ => old
       }
     },
+    cleanSbtBridge := {
+      val sbtV = sbtVersion.value
+      val sbtOrg = "org.scala-sbt"
+      val sbtScalaVersion = "2.10.6"
+      val bridgeVersion = version.value
+      val scalaV = scalaVersion.value
+
+      // Assumes that JDK version is the same than the one that publishes the bridge
+      val classVersion = System.getProperty("java.class.version")
+
+      val home = System.getProperty("user.home")
+      val org = organization.value
+      val artifact = moduleName.value
+      val artifactName =
+        s"$org-$artifact-$bridgeVersion-bin_${scalaV}__$classVersion"
+
+      val targetsToDelete = List(
+        // We cannot use the target key, it's not scoped in `ThisBuild` nor `Global`.
+        (baseDirectory in ThisBuild).value / "target" / "zinc-components",
+        file(home) / ".ivy2/cache" / sbtOrg / artifactName,
+        file(home) / ".sbt/boot" / s"scala-$sbtScalaVersion" / sbtOrg / "sbt" / sbtV / artifactName
+      )
+      val logger = streams.value.log
+      logger.info(wrapIn(scala.Console.BOLD, "Cleaning stale compiler bridges:"))
+      targetsToDelete.foreach { target =>
+        IO.delete(target)
+        logger.info(s"${wrapIn(scala.Console.GREEN, "  ✓ ")}${target.getAbsolutePath}")
+      }
+    },
+    publishLocal := publishLocal.dependsOn(cleanSbtBridge).value,
     altPublishSettings,
-    cachedPublishLocal := cachedPublishLocal.dependsOn(cachedPublishLocal.in(zincApiInfo)).value,
-    // Make sure that the sources are published for the bridge because we need them to compile it
-    publishArtifact in (Compile, packageSrc) := true,
+    OurStuff.extraCompilerBridgeSettings
   )
 
 /**
@@ -543,7 +559,7 @@ lazy val otherRootSettings = Seq(
   Scripted.scriptedUnpublished := scriptedUnpublishedTask.evaluated,
   Scripted.scriptedSource := (sourceDirectory in zinc).value / "sbt-test",
   publishAll := {
-    val _ = cachedPublishLocal.all(ScopeFilter(inAnyProject)).value
+    val _ = OurStuff.cachedPublishLocal.all(ScopeFilter(inAnyProject)).value
   }
 )
 
@@ -600,6 +616,16 @@ def scriptedUnpublishedTask: Def.Initialize[InputTask[Unit]] = Def.inputTask {
 lazy val publishAll = TaskKey[Unit]("publish-all")
 lazy val publishLauncher = TaskKey[Unit]("publish-launcher")
 
+def customCommands: Seq[Setting[_]] = Seq(
+  commands += Command.command("release") { state =>
+    "clean" :: // This is required since version number is generated in properties file.
+      "+compile" ::
+      "+publishSigned" ::
+      "reload" ::
+      state
+  }
+)
+
 inThisBuild(Seq(
   whitesourceProduct                   := "Lightbend Reactive Platform",
   whitesourceAggregateProjectName      := "sbt-zinc-master",
@@ -608,122 +634,3 @@ inThisBuild(Seq(
   whitesourceFailOnError               := sys.env.contains("WHITESOURCE_PASSWORD"), // fail if pwd is present
   whitesourceForceCheckAllDependencies := true,
 ))
-
-// Defines a resolver that is used to publish only for local testing via scripted
-val ScriptedResolverId = "zinc-scripted-local"
-val ScriptedResolveCacheDir: File = file(sys.props("user.dir") + s"/.ivy2/$ScriptedResolverId")
-val ScriptedResolver: Resolver =
-  Resolver.file(ScriptedResolverId, ScriptedResolveCacheDir)(Resolver.ivyStylePatterns)
-
-/**
- * This setting figures out whether the version is a snapshot or not and configures
- * the source and doc artifacts that are published by the build.
- *
- * Snapshot is a term with no clear definition. In this code, a snapshot is a revision
- * that has either build or time metadata in its representation. In those cases, the
- * build will not publish doc and source artifacts by any of the publishing actions.
- */
-val publishDocAndSourceArtifact: Def.Initialize[Boolean] = Def.setting {
-  import sbtdynver.{ GitDescribeOutput, DynVerPlugin }
-  import DynVerPlugin.{ autoImport => DynVerKeys }
-  def isDynVerSnapshot(gitInfo: Option[GitDescribeOutput], defaultValue: Boolean): Boolean = {
-    val isStable = gitInfo.map { info =>
-      info.ref.value.startsWith("v") &&
-      (info.commitSuffix.distance <= 0 || info.commitSuffix.sha.isEmpty)
-    }
-    val isNewSnapshot =
-      isStable.map(stable => !stable || defaultValue)
-    // Return previous snapshot definition in case users has overridden version
-    isNewSnapshot.getOrElse(defaultValue)
-  }
-
-  // We publish doc and source artifacts if the version is not a snapshot
-  !isDynVerSnapshot(DynVerKeys.dynverGitDescribeOutput.value, Keys.isSnapshot.value)
-}
-
-import scala.Console
-val P = s"[${Console.BOLD}${Console.CYAN}scripted${Console.RESET}]"
-val cachedPublishLocalImpl: Def.Initialize[Task[Unit]] = Def.taskDyn {
-  if ((Keys.skip in Keys.publish).value) Def.task(())
-  else
-    Def.taskDyn {
-      import sbt.util.Logger.{ Null => NoLogger }
-      val logger = Keys.streams.value.log
-
-      // Find out the configuration of this task to invoke source dirs in the right place
-      val taskConfig = Keys.resolvedScoped.value.scope.config
-      val currentConfig: sbt.ConfigKey = taskConfig.fold(identity, Compile, Compile)
-
-      // Important to make it transitive, we just want to check if a jar exists
-      val moduleID = Keys.projectID.value.intransitive()
-      val scalaModule = Keys.scalaModuleInfo.value
-      val ivyConfig = Keys.ivyConfiguration.value
-      val options = ivyConfig.updateOptions
-
-      // If it's another thing, just fail! We must have an inline ivy config here.
-      val inlineConfig = ivyConfig.asInstanceOf[InlineIvyConfiguration]
-      val fasterIvyConfig: InlineIvyConfiguration = inlineConfig
-        .withResolvers(Vector(ScriptedResolver))
-        .withChecksums(Vector())
-        // We can do this because we resolve intransitively and nobody but this task publishes
-        .withLock(None)
-
-      val resolution = sbt.librarymanagement.ivy.IvyDependencyResolution(fasterIvyConfig)
-      val result = resolution.retrieve(moduleID, scalaModule, ScriptedResolveCacheDir, NoLogger)
-      result match {
-        case l: Left[_, _] => publishLocalWrapper(moduleID, fasterIvyConfig, false)
-        case Right(resolved) =>
-          Def.taskDyn {
-            val projectName = Keys.name.value
-            val baseDirectory = Keys.baseDirectory.value.toPath()
-            val sourceDirs = Keys.sourceDirectories.in(currentConfig).value
-            val resourceDirs = Keys.resourceDirectories.in(currentConfig).value
-            val allDirs = sourceDirs ++ resourceDirs
-            val files = allDirs.flatMap(sbt.Path.allSubpaths(_)).toIterator.map(_._1)
-
-            val allJars = resolved.filter(_.getPath().endsWith(".jar"))
-            val lastPublicationTime = allJars.map(_.lastModified()).max
-            val invalidatedSources = files.filter(_.lastModified() >= lastPublicationTime)
-            if (invalidatedSources.isEmpty) {
-              Def.task(logger.info(s"$P Skip publish for `$projectName`."))
-            } else {
-              Def.task {
-                val onlySources = invalidatedSources
-                  .filter(_.isFile)
-                  .map(f => baseDirectory.relativize(f.toPath).toString)
-                val allChanges = onlySources.mkString("\n\t-> ", "\n\t-> ", "\n")
-                logger.warn(s"$P Changes detected in $projectName: $allChanges")
-                publishLocalWrapper(moduleID, fasterIvyConfig, true).value
-              }
-            }
-          }
-      }
-    }
-}
-
-def publishLocalWrapper(moduleID: ModuleID,
-                        ivyConfiguration: InlineIvyConfiguration,
-                        overwrite: Boolean): Def.Initialize[Task[Unit]] = {
-  import sbt.internal.librarymanagement._
-  import sbt.librarymanagement.{ ModuleSettings, PublishConfiguration }
-  Def.task {
-    val logger = Keys.streams.value.log
-
-    def publishLocal(moduleSettings: ModuleSettings, config: PublishConfiguration): Unit = {
-      val ivy = new IvySbt(ivyConfiguration)
-      val module = new ivy.Module(moduleSettings)
-      val correctConfig = config.withOverwrite(overwrite)
-      val fastConfig: PublishConfiguration =
-        correctConfig.withResolverName(ScriptedResolverId).withChecksums(Vector())
-      IvyActions.publish(module, fastConfig, logger)
-    }
-
-    val name = Keys.name.value
-    val version = moduleID.revision
-    logger.warn(s"$P Publishing `$name`, version: '$version'.")
-
-    val moduleSettings = Keys.moduleSettings.value
-    val publishConfig = Keys.publishLocalConfiguration.value
-    publishLocal(moduleSettings, publishConfig)
-  }
-}
