@@ -72,7 +72,6 @@ object BuildImplementation {
     scalafmtOnCompile := true,
     scalafmtVersion := "1.2.0",
     scalafmtOnCompile in Sbt := false,
-    releaseEarlyWith := BintrayPublisher,
     description := "Incremental compiler of Scala",
     // The rest of the sbt developers come from the Sbt Houserules plugin
     developers += BuildAutoImported.ScalaCenterMaintainer,
