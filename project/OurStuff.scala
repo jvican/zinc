@@ -32,7 +32,10 @@ object OurStuff {
   )
 
   lazy val extraCompilerBridgeSettings = Seq(
-    cachedPublishLocal := cachedPublishLocal.dependsOn(cachedPublishLocal.in(LocalProject("zincApiInfo"))).value,
+    cachedPublishLocal := cachedPublishLocal
+      .dependsOn(cachedPublishLocal.in(LocalProject("zincApiInfo")))
+      .dependsOn(cachedPublishLocal.in(LocalProject("compilerInterface")))
+      .value,
     // Make sure that the sources are published for the bridge because we need them to compile it
     publishArtifact in (Compile, packageSrc) := true,
   )
