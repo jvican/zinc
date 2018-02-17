@@ -82,11 +82,11 @@ def commonSettings: Seq[Setting[_]] = Seq(
   )
 )
 
-def relaxNon212: Seq[Setting[_]] = Seq(
+def compilerVersionDependentScalacOptions: Seq[Setting[_]] = Seq(
   scalacOptions := {
     val old = scalacOptions.value
     scalaBinaryVersion.value match {
-      case "2.12" => old
+      case "2.12" => old ++ List("-opt-inline-from:<sources>", "-opt:l:inline", "-Yopt-inline-heuristics:at-inline-annotated")
       case _ =>
         old filterNot Set(
           "-Xfatal-warnings",
@@ -311,6 +311,7 @@ lazy val compilerInterface = (project in internalPath / "compiler-interface")
     scalaVersion := scala212,
     crossScalaVersions := Seq(scala212),
     relaxNon212,
+    compilerVersionDependentScalacOptions,
     libraryDependencies ++= Seq(scalaLibrary.value % Test),
     exportJars := true,
     resourceGenerators in Compile += Def
@@ -375,7 +376,7 @@ lazy val compilerBridge: Project = (project in internalPath / "compiler-bridge")
   .settings(
     baseSettings,
     crossScalaVersions := compilerBridgeScalaVersions,
-    relaxNon212,
+    compilerVersionDependentScalacOptions,
     libraryDependencies += scalaCompiler.value % "provided",
     autoScalaLibrary := false,
     // precompiledSettings,
@@ -437,7 +438,7 @@ lazy val compilerBridgeTest = (project in internalPath / "compiler-bridge-test")
   .settings(
     name := "Compiler Bridge Test",
     baseSettings,
-    relaxNon212,
+    compilerVersionDependentScalacOptions,
     // we need to fork because in unit tests we set usejavacp = true which means
     // we are expecting all of our dependencies to be on classpath so Scala compiler
     // can use them while constructing its own classpath for compilation
@@ -463,7 +464,7 @@ lazy val zincApiInfo = (project in internalPath / "zinc-apiinfo")
   .settings(
     name := "zinc ApiInfo",
     crossScalaVersions := compilerBridgeTestScalaVersions,
-    relaxNon212,
+    compilerVersionDependentScalacOptions,
     mimaSettings,
   )
 
@@ -474,7 +475,7 @@ lazy val zincClasspath = (project in internalPath / "zinc-classpath")
   .settings(
     name := "zinc Classpath",
     crossScalaVersions := compilerBridgeTestScalaVersions,
-    relaxNon212,
+    compilerVersionDependentScalacOptions,
     libraryDependencies ++= Seq(scalaCompiler.value, launcherInterface),
     mimaSettings,
   )
@@ -487,7 +488,7 @@ lazy val zincClassfile = (project in internalPath / "zinc-classfile")
   .settings(
     name := "zinc Classfile",
     crossScalaVersions := compilerBridgeTestScalaVersions,
-    relaxNon212,
+    compilerVersionDependentScalacOptions,
     mimaSettings,
   )
   .configure(addSbtIO, addSbtUtilLogging)
