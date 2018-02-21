@@ -150,6 +150,23 @@ class DependencySpecification extends UnitSpec {
     assert(deps("H") === Set("abc.A"))
   }
 
+  it should "detect dependency in type projections over singleton types" in {
+    val srcA = "trait A { def a = 1 }"
+    val srcB = "trait B { def b = 1.0 }"
+    val srcBar = "object Bar { Foo.provide.a }"
+    val srcFoo = "object Foo { def provide: Provider#Operations = ??? }"
+    val srcProvider = "trait Provider { type Operations = A }"
+
+    val compilerForTesting = new ScalaCompilerForUnitTesting
+    val classDependencies =
+      compilerForTesting.extractDependenciesFromSrcs(srcA, srcB, srcBar, srcFoo, srcProvider)
+    val memberDeps = classDependencies.memberRef
+    assert(memberDeps("Provider") === Set("A"))
+    // TODO: Should 'A' be really detect in `Bar`?
+    assert(memberDeps("Bar") === Set("Foo", "A"))
+    assert(memberDeps("Foo") === Set("Provider", "A"))
+  }
+
   private def extractClassDependenciesPublic: ExtractedClassDependencies = {
     val srcA = "class A"
     val srcB = "class B extends D[A]"

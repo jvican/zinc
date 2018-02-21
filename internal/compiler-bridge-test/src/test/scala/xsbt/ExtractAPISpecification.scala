@@ -161,7 +161,7 @@ class ExtractAPISpecification extends UnitSpec {
     assert(apis("A.AA") !== apis("B.AA"))
   }
 
-  it should "handle package objects and type companions" in {
+  it should "handle package objects" in {
     val src =
       """|package object abc {
          |  type BuildInfoKey = BuildInfoKey.Entry[_]
@@ -202,5 +202,16 @@ class ExtractAPISpecification extends UnitSpec {
     val (withSelfType, withoutSelfType) = apis.partition(hasSelfType)
     assert(withSelfType.map(_.name).toSet === Set("C3", "C4", "C5", "C6"))
     assert(withoutSelfType.map(_.name).toSet === Set("X", "Y", "C1", "C2", "C7", "C8"))
+  }
+
+  it should "represent a type alias" in {
+    val srcA = "trait B"
+    val srcB = "trait Provider { type Operations = B; class C }"
+    val compilerForTesting = new ScalaCompilerForUnitTesting
+    val apis = compilerForTesting
+      .extractApisFromSrcs(true)(List(srcA, srcB))
+      .flatMap(s => s.map(a => a.name -> a))
+      .toMap
+    println(apis)
   }
 }
