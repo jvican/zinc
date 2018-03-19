@@ -36,8 +36,8 @@ final class MixedAnalyzingCompiler(
   private[this] val absClasspath = toAbsolute(config.classpath)
 
   /** Mechanism to work with compiler arguments. */
-  private[this] val cArgs =
-    new CompilerArguments(config.compiler.scalaInstance, config.compiler.classpathOptions)
+  private[this] def cArgs(classpathOptions: ClasspathOptions) =
+    new CompilerArguments(config.compiler.scalaInstance, classpathOptions)
 
   /**
    * Compiles the given Java/Scala files.
@@ -73,7 +73,9 @@ final class MixedAnalyzingCompiler(
         JarUtils.withPreviousJar(output) { extraClasspath =>
           val sources = if (config.currentSetup.order == Mixed) incSrc else scalaSrcs
           val cp = toAbsolute(extraClasspath) ++ absClasspath
-          val arguments = cArgs(Nil, cp, None, config.currentSetup.options.scalacOptions)
+          val classpathOptions = config.classpathOptions
+          val arguments =
+            cArgs(classpathOptions)(Nil, cp, None, config.currentSetup.options.scalacOptions)
           timed("Scala compilation", log) {
             config.compiler.compile(
               sources.toArray,
@@ -218,6 +220,7 @@ object MixedAnalyzingCompiler {
       progress: Option[CompileProgress] = None,
       options: Seq[String] = Nil,
       javacOptions: Seq[String] = Nil,
+      classpathOptions: ClasspathOptions,
       previousAnalysis: CompileAnalysis,
       previousSetup: Option[MiniSetup],
       perClasspathEntryLookup: PerClasspathEntryLookup,
@@ -254,6 +257,7 @@ object MixedAnalyzingCompiler {
     config(
       sources,
       classpath,
+      classpathOptions,
       compileSetup,
       progress,
       previousAnalysis,
@@ -272,6 +276,7 @@ object MixedAnalyzingCompiler {
   def config(
       sources: Seq[File],
       classpath: Seq[File],
+      classpathOptions: ClasspathOptions,
       setup: MiniSetup,
       progress: Option[CompileProgress],
       previousAnalysis: CompileAnalysis,
@@ -288,6 +293,7 @@ object MixedAnalyzingCompiler {
     new CompileConfiguration(
       sources,
       classpath,
+      classpathOptions,
       previousAnalysis,
       previousSetup,
       setup,
@@ -316,7 +322,7 @@ object MixedAnalyzingCompiler {
       JarUtils.getOutputJar(currentSetup.output).map(JarUtils.javacTempOutput).toSeq
     val absClasspath = classpath.map(_.getAbsoluteFile)
     val cArgs =
-      new CompilerArguments(compiler.scalaInstance, compiler.classpathOptions)
+      new CompilerArguments(compiler.scalaInstance, classpathOptions)
     val searchClasspath = explicitBootClasspath(options.scalacOptions) ++ withBootclasspath(
       cArgs,
       absClasspath
@@ -341,7 +347,7 @@ object MixedAnalyzingCompiler {
         javac,
         classpath,
         compiler.scalaInstance,
-        compiler.classpathOptions,
+        classpathOptions,
         entry,
         searchClasspath
       ),
