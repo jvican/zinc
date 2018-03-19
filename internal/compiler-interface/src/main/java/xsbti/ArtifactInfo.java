@@ -15,7 +15,7 @@ public final class ArtifactInfo {
 	public static final String ScalaOrganization = "org.scala-lang";
 
 	/** Define the name used to identify the sbt organization. */
-	public static final String SbtOrganization = "org.scala-sbt";
+	public static final String SbtOrganization = "ch.epfl.scala";
 
 	/** Define the ID used to identify the Scala library. */
 	public static final String ScalaLibraryID = "scala-library";
