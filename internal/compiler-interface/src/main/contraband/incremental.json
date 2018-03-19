@@ -308,6 +308,13 @@
           "since": "0.1.0"
         },
         {
+          "name": "classpathOptions",
+          "type": "xsbti.compile.ClasspathOptions",
+          "default": "xsbti.compile.ClasspathOptionsUtil.boot()",
+          "doc": "The configuration to create the classpath.",
+          "since": "1.0.3"
+        },
+        {
           "name": "maxErrors",
           "type": "int",
           "default": "100",

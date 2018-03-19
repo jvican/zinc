@@ -28,11 +28,6 @@ public interface ScalaCompiler {
 	ScalaInstance scalaInstance();
 
 	/**
-	 * Return the {@link ClasspathOptions} used by this instance of the compiler.
-	 */
-	ClasspathOptions classpathOptions();
-
-	/**
 	 * Recompile the subset of <code>sources</code> impacted by the
 	 * changes defined in <code>changes</code> and collect the new APIs.
 	 *

@@ -29,9 +29,8 @@ trait CompilingSpecification extends BridgeProviderSpecification {
 
   def scalaCompiler(instance: xsbti.compile.ScalaInstance, bridgeJar: File): AnalyzingCompiler = {
     val bridgeProvider = ZincUtil.constantBridgeProvider(instance, bridgeJar)
-    val classpath = ClasspathOptionsUtil.boot
     val cache = Some(new ClassLoaderCache(new URLClassLoader(Array())))
-    new AnalyzingCompiler(instance, bridgeProvider, classpath, _ => (), cache)
+    new AnalyzingCompiler(instance, bridgeProvider, _ => (), cache)
   }
 
   /**
@@ -174,6 +173,7 @@ trait CompilingSpecification extends BridgeProviderSpecification {
         val si = scalaInstance(scalaVersion, tempDir, noLogger)
         val sc = scalaCompiler(si, compilerBridge)
         val cp = si.allJars ++ Array(targetDir)
+        val classpathOptions = ClasspathOptionsUtil.boot
         val emptyChanges: DependencyChanges = new DependencyChanges {
           val modifiedBinaries = new Array[File](0)
           val modifiedClasses = new Array[String](0)
@@ -185,6 +185,7 @@ trait CompilingSpecification extends BridgeProviderSpecification {
           classpath = cp,
           singleOutput = targetDir,
           options = Array(),
+          classpathOptions = classpathOptions,
           callback = analysisCallback,
           maximumErrors = maxErrors,
           cache = cache,

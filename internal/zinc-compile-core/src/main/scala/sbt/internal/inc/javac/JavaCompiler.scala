@@ -45,15 +45,11 @@ object JavaTools {
    *
    * @param instance The Scala instance to be used for incremental compilation.
    *                 This is necessary to add Scala jars to the classpath.
-   * @param options An instance of classpath options configured for this
-   *                  incremental compilation that tell us, among other things,
-   *                  whether we should append Scala to the classpath.
    * @param javaHome Option location of java home to run Javac.
    * @return An instance of Java tools that includes a [[JavaCompiler]].
    */
   def directOrFork(
       instance: ScalaInstance,
-      options: ClasspathOptions,
       javaHome: Option[File]
   ): XJavaTools = {
     val (javaCompiler, javaDoc) = javaHome match {

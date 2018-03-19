@@ -121,9 +121,8 @@ class BaseCompilerSpec extends BridgeProviderSpecification {
 
   def scalaCompiler(instance: xsbti.compile.ScalaInstance, bridgeJar: File): AnalyzingCompiler = {
     val bridgeProvider = ZincUtil.constantBridgeProvider(instance, bridgeJar)
-    val classpath = ClasspathOptionsUtil.boot
     val cache = Some(new ClassLoaderCache(new URLClassLoader(Array())))
-    new AnalyzingCompiler(instance, bridgeProvider, classpath, _ => (), cache)
+    new AnalyzingCompiler(instance, bridgeProvider, _ => (), cache)
   }
 
   case class CompilerSetup(
@@ -141,7 +140,7 @@ class BaseCompilerSpec extends BridgeProviderSpecification {
 
     val si = scalaInstance(scalaVersion, tempDir, noLogger)
     val sc = scalaCompiler(si, compilerBridge)
-    val cs = compiler.compilers(si, ClasspathOptionsUtil.boot, None, sc)
+    val cs = compiler.compilers(si, None, sc)
 
     private def analysis(forEntry: File): Optional[CompileAnalysis] = {
       analysisForCp.get(forEntry) match {
@@ -174,18 +173,21 @@ class BaseCompilerSpec extends BridgeProviderSpecification {
                                Some(progress),
                                extra)
     val prev = compiler.emptyPreviousResult
-    val in = compiler.inputs(Array(classesDir) ++ si.allJars ++ classpath,
-                             sources,
-                             classesDir,
-                             Array(),
-                             Array(),
-                             maxErrors,
-                             Array(),
-                             CompileOrder.Mixed,
-                             cs,
-                             setup,
-                             prev,
-                             Optional.empty())
+    val in = compiler.inputs(
+      Array(classesDir) ++ si.allJars ++ classpath,
+      sources,
+      classesDir,
+      Array(),
+      Array(),
+      ClasspathOptionsUtil.boot(),
+      maxErrors,
+      Array(),
+      CompileOrder.Mixed,
+      cs,
+      setup,
+      prev,
+      Optional.empty()
+    )
 
     def doCompile(newInputs: Inputs => Inputs = identity): CompileResult = {
       lastCompiledUnits = Set.empty

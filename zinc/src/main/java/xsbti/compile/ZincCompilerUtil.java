@@ -40,22 +40,6 @@ public interface ZincCompilerUtil {
      */
     public static ScalaCompiler scalaCompiler(
         ScalaInstance scalaInstance,
-        File compilerBridgeJar,
-        ClasspathOptions classpathOptions
-    ) {
-        return ZincUtil.scalaCompiler(scalaInstance, compilerBridgeJar, classpathOptions);
-    }
-
-    /**
-     * Create a Scala compiler from a {@link ScalaInstance} and the jar
-     * containing the compiler interface to be used.
-     *
-     * @param scalaInstance     The Scala instance to be used.
-     * @param compilerBridgeJar The jar file of the compiler bridge.
-     * @return A Scala compiler with the given configuration.
-     */
-    public static ScalaCompiler scalaCompiler(
-        ScalaInstance scalaInstance,
         File compilerBridgeJar
     ) {
         return ZincUtil.scalaCompiler(scalaInstance, compilerBridgeJar);

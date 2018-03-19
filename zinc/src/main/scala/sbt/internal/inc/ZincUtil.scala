@@ -35,42 +35,29 @@ object ZincUtil {
    * @param scalaInstance The Scala instance to be used.
    * @param compilerBridgeJar The jar file or directory of the compiler bridge compiled for the
    *                          given scala instance.
-   * @param classpathOptions The options of all the classpath that the compiler takes in.
    * @return A Scala compiler ready to be used.
    */
   def scalaCompiler(
       scalaInstance: ScalaInstance,
-      compilerBridgeJar: File,
-      classpathOptions: ClasspathOptions
+      compilerBridgeJar: File
   ): AnalyzingCompiler = {
+    val emptyHandler = (_: Seq[String]) => ()
     val bridgeProvider = constantBridgeProvider(scalaInstance, compilerBridgeJar)
     val loader = Some(new ClassLoaderCache(new URLClassLoader(Array())))
-    new AnalyzingCompiler(scalaInstance, bridgeProvider, classpathOptions, _ => (), loader)
-  }
-
-  /**
-   * Instantiate a Scala compiler that is instrumented to analyze dependencies.
-   * This Scala compiler is useful to create your own instance of incremental
-   * compilation.
-   *
-   * @see IncrementalCompiler for more details on creating your custom incremental compiler.
-   *
-   * @param scalaInstance The Scala instance to be used.
-   * @param compilerBridgeJar The jar file or directory of the compiler bridge compiled for the
-   *                          given scala instance.
-   * @return A Scala compiler ready to be used.
-   */
-  def scalaCompiler(scalaInstance: ScalaInstance, compilerBridgeJar: File): AnalyzingCompiler = {
-    scalaCompiler(scalaInstance, compilerBridgeJar, ClasspathOptionsUtil.boot)
+    new AnalyzingCompiler(
+      scalaInstance,
+      bridgeProvider,
+      emptyHandler,
+      loader
+    )
   }
 
   def compilers(
-      instance: ScalaInstance,
-      classpathOptions: ClasspathOptions,
+      instance: xsbti.compile.ScalaInstance,
       javaHome: Option[File],
       scalac: ScalaCompiler
   ): Compilers =
-    compilers(JavaTools.directOrFork(instance, classpathOptions, javaHome), scalac)
+    compilers(JavaTools.directOrFork(instance, javaHome), scalac)
 
   def compilers(javaTools: XJavaTools, scalac: ScalaCompiler): Compilers = {
     Compilers.of(scalac, javaTools)

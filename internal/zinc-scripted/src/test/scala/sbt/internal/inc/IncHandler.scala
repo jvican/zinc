@@ -142,14 +142,13 @@ class IncHandler(directory: File, cacheDir: File, scriptedLog: ManagedLogger, co
         toCache
     }
     val analyzingCompiler = scalaCompiler(si, compilerBridge)
-    IncInstance(si, compiler.compilers(si, ClasspathOptionsUtil.boot, None, analyzingCompiler))
+    IncInstance(si, compiler.compilers(si, None, analyzingCompiler))
   }
 
   private final val unit = (_: Seq[String]) => ()
   def scalaCompiler(instance: xsbti.compile.ScalaInstance, bridgeJar: File): AnalyzingCompiler = {
     val bridgeProvider = ZincUtil.constantBridgeProvider(instance, bridgeJar)
-    val classpath = ClasspathOptionsUtil.boot
-    new AnalyzingCompiler(instance, bridgeProvider, classpath, unit, IncHandler.classLoaderCache)
+    new AnalyzingCompiler(instance, bridgeProvider, unit, IncHandler.classLoaderCache)
   }
 
   lazy val commands: Map[String, IncCommand] = Map(
@@ -436,18 +435,21 @@ case class ProjectStructure(
 
     val output = outputJar.getOrElse(classesDir)
     val classpath = (i.si.allJars.toList ++ (unmanagedJars :+ output) ++ internalClasspath).toArray
-    val in = compiler.inputs(classpath,
-                             sources.toArray,
-                             output,
-                             scalacOptions,
-                             Array(),
-                             maxErrors,
-                             Array(),
-                             CompileOrder.Mixed,
-                             cs,
-                             setup,
-                             previousResult,
-                             Optional.empty())
+    val in = compiler.inputs(
+      classpath,
+      sources.toArray,
+      output,
+      scalacOptions,
+      Array(),
+      ClasspathOptionsUtil.boot(),
+      maxErrors,
+      Array(),
+      CompileOrder.Mixed,
+      cs,
+      setup,
+      previousResult,
+      Optional.empty()
+    )
     val result = compiler.compile(in, scriptedLog)
     val analysis = result.analysis match { case a: Analysis => a }
     cachedStore.set(AnalysisContents.create(analysis, result.setup))

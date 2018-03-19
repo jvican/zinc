@@ -71,6 +71,7 @@ public interface IncrementalCompiler {
      * @param globalsCache Directory where previous cached compilers are stored.
      * @param scalacOptions An array of options/settings for the Scala compiler.
      * @param javacOptions An array of options for the Java compiler.
+     * @param classpathOptions The options to configure the classpath.
      * @param previousAnalysis Optional previous incremental compilation analysis.
      * @param previousSetup Optional previous incremental compilation setup.
      * @param perClasspathEntryLookup Lookup of data structures and operations
@@ -100,6 +101,7 @@ public interface IncrementalCompiler {
                           GlobalsCache globalsCache,
                           String[] scalacOptions,
                           String[] javacOptions,
+                          ClasspathOptions classpathOptions,
                           Optional<CompileAnalysis> previousAnalysis,
                           Optional<MiniSetup> previousSetup,
                           PerClasspathEntryLookup perClasspathEntryLookup,
