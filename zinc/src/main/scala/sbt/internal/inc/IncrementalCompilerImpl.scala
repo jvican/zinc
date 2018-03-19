@@ -57,6 +57,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       progress().toOption,
       scalacOptions,
       javacOptions,
+      classpathOptions,
       in.previousResult.analysis.toOption,
       in.previousResult.setup.toOption,
       perClasspathEntryLookup,
@@ -112,6 +113,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       cache: xsbti.compile.GlobalsCache,
       scalaOptions: Array[String],
       javaOptions: Array[String],
+      classpathOptions: XClasspathOptions,
       previousAnalysis: Optional[xsbti.compile.CompileAnalysis],
       previousSetup: Optional[xsbti.compile.MiniSetup],
       perClasspathEntryLookup: xsbti.compile.PerClasspathEntryLookup,
@@ -134,6 +136,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       progress.toOption,
       scalaOptions.toSeq,
       javaOptions.toSeq,
+      classpathOptions,
       previousAnalysis.toOption,
       previousSetup.toOption,
       perClasspathEntryLookup,
@@ -225,6 +228,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       progress: Option[CompileProgress] = None,
       scalaOptions: Seq[String] = Nil,
       javaOptions: Seq[String] = Nil,
+      classpathOptions: XClasspathOptions,
       previousAnalysis: Option[CompileAnalysis],
       previousSetup: Option[MiniSetup],
       perClasspathEntryLookup: PerClasspathEntryLookup,
@@ -249,6 +253,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
         progress,
         scalaOptions,
         javaOptions,
+        classpathOptions,
         prev,
         previousSetup,
         perClasspathEntryLookup,
@@ -340,6 +345,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       classesDirectory: File,
       scalacOptions: Array[String],
       javacOptions: Array[String],
+      classpathOptions: XClasspathOptions,
       maxErrors: Int,
       sourcePositionMappers: Array[JavaFunction[Position, Optional[Position]]],
       order: CompileOrder,
@@ -354,6 +360,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
         classesDirectory,
         scalacOptions,
         javacOptions,
+        classpathOptions,
         maxErrors,
         foldMappers(sourcePositionMappers),
         order
@@ -378,11 +385,10 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
 
   def compilers(
       instance: xsbti.compile.ScalaInstance,
-      cpOptions: XClasspathOptions,
       javaHome: Option[File],
       scalac: ScalaCompiler
   ): Compilers =
-    ZincUtil.compilers(instance, cpOptions, javaHome, scalac)
+    ZincUtil.compilers(instance, javaHome, scalac)
 
   def compilers(javaTools: XJavaTools, scalac: ScalaCompiler): Compilers =
     ZincUtil.compilers(javaTools, scalac)
