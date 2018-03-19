@@ -25,23 +25,6 @@ public interface ZincCompilerUtil {
     }
 
     /**
-     * Create a Scala compiler from a {@link ScalaInstance}, the jar containing
-     * the compiler interface to be used and {@link ClasspathOptions}.
-     *
-     * @param scalaInstance     The Scala instance to be used.
-     * @param compilerBridgeJar The jar file of the compiler bridge.
-     * @param classpathOptions  The options of all the classpath that the
-     *                          compiler takes in.
-     * @return A Scala compiler with the given configuration.
-     * @see ZincBridgeProvider Utility to get the Scala instance using ivy.
-     */
-    public static ScalaCompiler scalaCompiler(ScalaInstance scalaInstance,
-                                              File compilerBridgeJar,
-                                              ClasspathOptions classpathOptions) {
-        return sbt.internal.inc.ZincUtil.scalaCompiler(scalaInstance, compilerBridgeJar, classpathOptions);
-    }
-
-    /**
      * Create a Scala compiler from a {@link ScalaInstance} and the jar
      * containing the compiler interface to be used.
      *
