@@ -13,6 +13,7 @@ import java.io.File
 
 import xsbti.Reporter
 import xsbti.compile.{
+  ClasspathOptions,
   CompileAnalysis,
   CompileProgress,
   GlobalsCache,
@@ -26,6 +27,7 @@ import xsbti.compile.{
  *
  * @param sources
  * @param classpath
+ * @param classpathOptions
  * @param previousAnalysis
  * @param previousSetup
  * @param currentSetup
@@ -40,6 +42,7 @@ import xsbti.compile.{
 final class CompileConfiguration(
     val sources: Seq[File],
     val classpath: Seq[File],
+    val classpathOptions: ClasspathOptions,
     val previousAnalysis: CompileAnalysis,
     val previousSetup: Option[MiniSetup],
     val currentSetup: MiniSetup,
