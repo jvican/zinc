@@ -31,13 +31,20 @@ final class CompilerInterface {
     cached.run(sources, changes, callback, log, delegate, progress)
 }
 
-class InterfaceCompileFailed(val arguments: Array[String],
-                             val problems: Array[Problem],
-                             override val toString: String)
+final class InterfaceCompileFailed(val arguments: Array[String],
+                                   val problems: Array[Problem],
+                                   override val toString: String)
     extends xsbti.CompileFailed
 
-class InterfaceCompileCancelled(val arguments: Array[String], override val toString: String)
+final class InterfaceCompileCancelled(val arguments: Array[String], override val toString: String)
     extends xsbti.CompileCancelled
+
+object TyperCompileCancelled extends xsbti.CompileCancelled {
+
+  /** Empty because we only use it internally to stop compiler execution. */
+  override def arguments(): Array[String] = Array()
+  override def toString: String = "Compilation was cancelled within typer."
+}
 
 private final class WeakLog(private[this] var log: Logger, private[this] var delegate: Reporter) {
   def apply(message: String): Unit = {
@@ -127,7 +134,8 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
       compiler.set(callback, underlyingReporter)
       val run = new compiler.ZincRun(compileProgress)
       val sortedSourceFiles = sources.map(_.getAbsolutePath).sortWith(_ < _)
-      run.compile(sortedSourceFiles)
+      try run.compile(sortedSourceFiles)
+      catch { case TyperCompileCancelled => underlyingReporter.cancelled = true }
       processUnreportedWarnings(run)
       underlyingReporter.problems.foreach(p =>
         callback.problem(p.category, p.position, p.message, p.severity, true))

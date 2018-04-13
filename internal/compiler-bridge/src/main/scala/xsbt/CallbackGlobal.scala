@@ -67,6 +67,23 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
       if (!compileProgress.advance(current, total)) cancel else ()
   }
 
+  // Add hook in `typedDefDef` via `treeCopy` to stop compilation within typer as soon as possible
+  override final def newLazyTreeCopier: TreeCopier = new CancellingLazyTreeCopier
+  final class CancellingLazyTreeCopier extends LazyTreeCopier {
+    override def DefDef(
+        tree: Tree,
+        mods: Modifiers,
+        name: Name,
+        tparams: List[TypeDef],
+        vparamss: List[scala.List[ValDef]],
+        tpt: Tree,
+        rhs: Tree
+    ): DefDef = {
+      if (reporter.cancelled) throw TyperCompileCancelled
+      super.DefDef(tree, mods, name, tparams, vparamss, tpt, rhs)
+    }
+  }
+
   object dummy // temporary fix for #4426
 
   /** Phase that analyzes the generated class files and maps them to sources. */
