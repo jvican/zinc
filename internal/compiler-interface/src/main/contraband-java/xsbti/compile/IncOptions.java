@@ -141,7 +141,7 @@ public final class IncOptions implements java.io.Serializable {
         apiDiffContextSize = xsbti.compile.IncOptions.defaultApiDiffContextSize();
         apiDumpDirectory = xsbti.compile.IncOptions.defaultApiDumpDirectory();
         classfileManagerType = xsbti.compile.IncOptions.defaultClassFileManagerType();
-        useCustomizedFileManager = xsbti.compile.IncOptions.defaultUseOptimizedSealed();
+        useCustomizedFileManager = xsbti.compile.IncOptions.defaultUseCustomizedFileManager();
         recompileOnMacroDef = xsbti.compile.IncOptions.defaultRecompileOnMacroDef();
         useOptimizedSealed = xsbti.compile.IncOptions.defaultUseOptimizedSealed();
         storeApis = xsbti.compile.IncOptions.defaultStoreApis();

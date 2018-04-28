@@ -112,6 +112,33 @@ final class AnalyzingCompiler(
     ()
   }
 
+  def compileAndSetUpPicklepath(
+      sources: Array[File],
+      picklepath: Array[URI],
+      changes: DependencyChanges,
+      options: Array[String],
+      output: Output,
+      callback: AnalysisCallback,
+      reporter: Reporter,
+      cache: GlobalsCache,
+      log: xLogger,
+      progressOpt: Optional[CompileProgress]
+  ): Unit = {
+    def setUpPicklePath(compiler: CachedCompiler): Unit = {
+      call("xsbt.CompilerInterface", "setUpPicklepath", log)(
+        classOf[Array[URI]],
+        classOf[CachedCompiler]
+      )(picklepath, compiler)
+      ()
+    }
+
+    //val optionsWithPickleId =
+    val cached = cache(options, output, !changes.isEmpty, this, log, reporter)
+    setUpPicklePath(cached)
+    val progress = if (progressOpt.isPresent) progressOpt.get else IgnoreProgress
+    compile(sources, changes, callback, log, reporter, progress, cached)
+  }
+
   def newCachedCompiler(
       arguments: Array[String],
       output: Output,
