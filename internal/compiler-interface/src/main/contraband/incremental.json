@@ -309,6 +309,19 @@
           "default": "xsbti.compile.CompileOrder.Mixed",
           "doc": "Controls the order in which Java and Scala sources are compiled.",
           "since": "0.1.0"
+        },
+        {
+          "name": "picklepath",
+          "type": "java.net.URI*",
+          "default": "new java.net.URI[0]",
+          "doc": [
+            "Defines the picklepath to use for compilation.",
+            "A pickle path is the collection of URI handles that identify in-memory",
+            "Scala pickles. These pickles allow Zinc to pipeline compilation of",
+            "multi-module builds, allowing downstream modules to start compilation",
+            "after the phase pickler has been executed in all the dependent modules."
+          ],
+          "since": "1.2.0"
         }
       ]
     },
@@ -451,7 +464,18 @@
           "type": "java.util.Optional<xsbti.compile.CompileProgress>",
           "doc": "Optionally provide progress indication."
         },
-        { "name": "extra", "type": "xsbti.T2<String, String>*" }
+        { "name": "extra", "type": "xsbti.T2<String, String>*" },
+        {
+          "name": "picklePromise",
+          "type": "java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>>",
+          "default": "java.util.Optional.empty()",
+          "doc": [
+            "Allows the analysis callback to complete the future when",
+            "the compiler is past the pickler gen phase, so that compilation",
+            "clients can potentially start compilation of downstream projects."
+          ],
+          "since": "1.2.0"
+        }
       ]
     },
     {
