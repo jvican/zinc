@@ -13,17 +13,20 @@ import sbt.internal.inc.Analysis.{ LocalProduct, NonLocalProduct }
 import xsbt.api.{ APIUtil, HashAPI, NameHashing }
 import xsbti.api._
 import xsbti.compile.{
-  ClassFileManager => XClassFileManager,
   CompileAnalysis,
   DependencyChanges,
   IncOptions,
-  Output
+  Output,
+  ClassFileManager => XClassFileManager
 }
 import xsbti.{ Position, Problem, Severity, UseScope }
 import sbt.util.Logger
 import sbt.util.InterfaceUtil.jo2o
 import java.io.File
+import java.net.URI
 import java.util
+import java.util.Optional
+import java.util.concurrent.CompletableFuture
 
 import xsbti.api.DependencyContext
 import xsbti.compile.analysis.ReadStamps
@@ -55,7 +58,9 @@ object IncrementalCompile {
       previous0: CompileAnalysis,
       output: Output,
       log: Logger,
-      options: IncOptions): (Boolean, Analysis) = {
+      options: IncOptions,
+      picklePromise: CompletableFuture[Optional[URI]]
+  ): (Boolean, Analysis) = {
     val previous = previous0 match { case a: Analysis => a }
     val current = Stamps.initial(Stamper.forLastModified, Stamper.forHash, Stamper.forLastModified)
     val internalBinaryToSourceClassName = (binaryClassName: String) =>
@@ -75,7 +80,8 @@ object IncrementalCompile {
                                      externalAPI,
                                      current,
                                      output,
-                                     options),
+                                     options,
+                                     picklePromise),
         log,
         options
       )
@@ -106,7 +112,8 @@ private object AnalysisCallback {
       externalAPI: (File, String) => Option[AnalyzedClass],
       current: ReadStamps,
       output: Output,
-      options: IncOptions
+      options: IncOptions,
+      picklePromise: CompletableFuture[Optional[URI]]
   ) {
     def build(): AnalysisCallback = new AnalysisCallback(
       internalBinaryToSourceClassName,
@@ -114,7 +121,8 @@ private object AnalysisCallback {
       externalAPI,
       current,
       output,
-      options
+      options,
+      picklePromise
     )
   }
 }
@@ -125,7 +133,8 @@ private final class AnalysisCallback(
     externalAPI: (File, String) => Option[AnalyzedClass],
     stampReader: ReadStamps,
     output: Output,
-    options: IncOptions
+    options: IncOptions,
+    picklePromise: CompletableFuture[Optional[URI]]
 ) extends xsbti.AnalysisCallback {
 
   private[this] val compilation: Compilation = Compilation(output)
@@ -395,7 +404,9 @@ private final class AnalysisCallback(
                     binDeps)
     }
 
-  override def dependencyPhaseCompleted(): Unit = {}
-
   override def apiPhaseCompleted(): Unit = {}
+  override def dependencyPhaseCompleted(): Unit = {}
+  override def picklerPhaseCompleted(handle: URI): Unit = {
+    picklePromise.complete(Optional.of(handle))
+  }
 }
