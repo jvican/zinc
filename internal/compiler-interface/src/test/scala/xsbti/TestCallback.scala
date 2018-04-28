@@ -1,6 +1,7 @@
 package xsbti
 
 import java.io.File
+import java.net.URI
 import java.util
 
 import xsbti.api.{ ClassLike, DependencyContext }
@@ -75,8 +76,8 @@ class TestCallback extends AnalysisCallback {
               reported: Boolean): Unit = ()
 
   override def dependencyPhaseCompleted(): Unit = {}
-
   override def apiPhaseCompleted(): Unit = {}
+  override def picklerPhaseCompleted(handle: URI): Unit = {}
 }
 
 object TestCallback {

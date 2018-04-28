@@ -19,6 +19,12 @@ public final class CompileOptions implements java.io.Serializable {
     public static CompileOptions of(java.io.File[] _classpath, java.io.File[] _sources, java.io.File _classesDirectory, String[] _scalacOptions, String[] _javacOptions, int _maxErrors, java.util.function.Function<xsbti.Position, xsbti.Position> _sourcePositionMapper, xsbti.compile.CompileOrder _order) {
         return new CompileOptions(_classpath, _sources, _classesDirectory, _scalacOptions, _javacOptions, _maxErrors, _sourcePositionMapper, _order);
     }
+    public static CompileOptions create(java.io.File[] _classpath, java.io.File[] _sources, java.io.File _classesDirectory, String[] _scalacOptions, String[] _javacOptions, int _maxErrors, java.util.function.Function<xsbti.Position, xsbti.Position> _sourcePositionMapper, xsbti.compile.CompileOrder _order, java.net.URI[] _picklepath) {
+        return new CompileOptions(_classpath, _sources, _classesDirectory, _scalacOptions, _javacOptions, _maxErrors, _sourcePositionMapper, _order, _picklepath);
+    }
+    public static CompileOptions of(java.io.File[] _classpath, java.io.File[] _sources, java.io.File _classesDirectory, String[] _scalacOptions, String[] _javacOptions, int _maxErrors, java.util.function.Function<xsbti.Position, xsbti.Position> _sourcePositionMapper, xsbti.compile.CompileOrder _order, java.net.URI[] _picklepath) {
+        return new CompileOptions(_classpath, _sources, _classesDirectory, _scalacOptions, _javacOptions, _maxErrors, _sourcePositionMapper, _order, _picklepath);
+    }
     /**
      * The classpath to use for compilation.
      * This will be modified according to the ClasspathOptions used to configure the ScalaCompiler.
@@ -38,6 +44,14 @@ public final class CompileOptions implements java.io.Serializable {
     private java.util.function.Function<xsbti.Position, xsbti.Position> sourcePositionMapper;
     /** Controls the order in which Java and Scala sources are compiled. */
     private xsbti.compile.CompileOrder order;
+    /**
+     * Defines the picklepath to use for compilation.
+     * A pickle path is the collection of URI handles that identify in-memory
+     * Scala pickles. These pickles allow Zinc to pipeline compilation of
+     * multi-module builds, allowing downstream modules to start compilation
+     * after the phase pickler has been executed in all the dependent modules.
+     */
+    private java.net.URI[] picklepath;
     protected CompileOptions() {
         super();
         classpath = new java.io.File[0];
@@ -48,6 +62,7 @@ public final class CompileOptions implements java.io.Serializable {
         maxErrors = 100;
         sourcePositionMapper = new java.util.function.Function<xsbti.Position, xsbti.Position>() { public xsbti.Position apply(xsbti.Position a) { return a; } };
         order = xsbti.compile.CompileOrder.Mixed;
+        picklepath = new java.net.URI[0];
     }
     protected CompileOptions(java.io.File[] _classpath, java.io.File[] _sources, java.io.File _classesDirectory, String[] _scalacOptions, String[] _javacOptions, int _maxErrors, java.util.function.Function<xsbti.Position, xsbti.Position> _sourcePositionMapper, xsbti.compile.CompileOrder _order) {
         super();
@@ -59,6 +74,19 @@ public final class CompileOptions implements java.io.Serializable {
         maxErrors = _maxErrors;
         sourcePositionMapper = _sourcePositionMapper;
         order = _order;
+        picklepath = new java.net.URI[0];
+    }
+    protected CompileOptions(java.io.File[] _classpath, java.io.File[] _sources, java.io.File _classesDirectory, String[] _scalacOptions, String[] _javacOptions, int _maxErrors, java.util.function.Function<xsbti.Position, xsbti.Position> _sourcePositionMapper, xsbti.compile.CompileOrder _order, java.net.URI[] _picklepath) {
+        super();
+        classpath = _classpath;
+        sources = _sources;
+        classesDirectory = _classesDirectory;
+        scalacOptions = _scalacOptions;
+        javacOptions = _javacOptions;
+        maxErrors = _maxErrors;
+        sourcePositionMapper = _sourcePositionMapper;
+        order = _order;
+        picklepath = _picklepath;
     }
     public java.io.File[] classpath() {
         return this.classpath;
@@ -84,29 +112,35 @@ public final class CompileOptions implements java.io.Serializable {
     public xsbti.compile.CompileOrder order() {
         return this.order;
     }
+    public java.net.URI[] picklepath() {
+        return this.picklepath;
+    }
     public CompileOptions withClasspath(java.io.File[] classpath) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withSources(java.io.File[] sources) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withClassesDirectory(java.io.File classesDirectory) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withScalacOptions(String[] scalacOptions) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withJavacOptions(String[] javacOptions) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withMaxErrors(int maxErrors) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withSourcePositionMapper(java.util.function.Function<xsbti.Position, xsbti.Position> sourcePositionMapper) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public CompileOptions withOrder(xsbti.compile.CompileOrder order) {
-        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order);
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
+    }
+    public CompileOptions withPicklepath(java.net.URI[] picklepath) {
+        return new CompileOptions(classpath, sources, classesDirectory, scalacOptions, javacOptions, maxErrors, sourcePositionMapper, order, picklepath);
     }
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -115,13 +149,13 @@ public final class CompileOptions implements java.io.Serializable {
             return false;
         } else {
             CompileOptions o = (CompileOptions)obj;
-            return java.util.Arrays.deepEquals(this.classpath(), o.classpath()) && java.util.Arrays.deepEquals(this.sources(), o.sources()) && this.classesDirectory().equals(o.classesDirectory()) && java.util.Arrays.deepEquals(this.scalacOptions(), o.scalacOptions()) && java.util.Arrays.deepEquals(this.javacOptions(), o.javacOptions()) && (this.maxErrors() == o.maxErrors()) && this.sourcePositionMapper().equals(o.sourcePositionMapper()) && this.order().equals(o.order());
+            return java.util.Arrays.deepEquals(this.classpath(), o.classpath()) && java.util.Arrays.deepEquals(this.sources(), o.sources()) && this.classesDirectory().equals(o.classesDirectory()) && java.util.Arrays.deepEquals(this.scalacOptions(), o.scalacOptions()) && java.util.Arrays.deepEquals(this.javacOptions(), o.javacOptions()) && (this.maxErrors() == o.maxErrors()) && this.sourcePositionMapper().equals(o.sourcePositionMapper()) && this.order().equals(o.order()) && java.util.Arrays.deepEquals(this.picklepath(), o.picklepath());
         }
     }
     public int hashCode() {
-        return 37 * (37 * (37 * (37 * (37 * (37 * (37 * (37 * (37 * (17 + "xsbti.compile.CompileOptions".hashCode()) + java.util.Arrays.deepHashCode(classpath())) + java.util.Arrays.deepHashCode(sources())) + classesDirectory().hashCode()) + java.util.Arrays.deepHashCode(scalacOptions())) + java.util.Arrays.deepHashCode(javacOptions())) + (new Integer(maxErrors())).hashCode()) + sourcePositionMapper().hashCode()) + order().hashCode());
+        return 37 * (37 * (37 * (37 * (37 * (37 * (37 * (37 * (37 * (37 * (17 + "xsbti.compile.CompileOptions".hashCode()) + java.util.Arrays.deepHashCode(classpath())) + java.util.Arrays.deepHashCode(sources())) + classesDirectory().hashCode()) + java.util.Arrays.deepHashCode(scalacOptions())) + java.util.Arrays.deepHashCode(javacOptions())) + (new Integer(maxErrors())).hashCode()) + sourcePositionMapper().hashCode()) + order().hashCode()) + java.util.Arrays.deepHashCode(picklepath()));
     }
     public String toString() {
-        return "CompileOptions("  + "classpath: " + classpath() + ", " + "sources: " + sources() + ", " + "classesDirectory: " + classesDirectory() + ", " + "scalacOptions: " + scalacOptions() + ", " + "javacOptions: " + javacOptions() + ", " + "maxErrors: " + maxErrors() + ", " + "sourcePositionMapper: " + sourcePositionMapper() + ", " + "order: " + order() + ")";
+        return "CompileOptions("  + "classpath: " + classpath() + ", " + "sources: " + sources() + ", " + "classesDirectory: " + classesDirectory() + ", " + "scalacOptions: " + scalacOptions() + ", " + "javacOptions: " + javacOptions() + ", " + "maxErrors: " + maxErrors() + ", " + "sourcePositionMapper: " + sourcePositionMapper() + ", " + "order: " + order() + ", " + "picklepath: " + picklepath() + ")";
     }
 }
