@@ -147,4 +147,4 @@ private[inc] class IncrementalNameHashingImpl(log: sbt.util.Logger, options: Inc
 }
 
 private final class IncrementalNameHashing(log: sbt.util.Logger, options: IncOptions)
-  extends IncrementalNameHashingImpl(log, options)
+    extends IncrementalNameHashingImpl(log, options)

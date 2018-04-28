@@ -384,11 +384,27 @@ lazy val compilerBridge: Project = (project in internalPath / "compiler-bridge")
     // precompiledSettings,
     name := "Compiler Bridge",
     exportJars := true,
-    inBoth(unmanagedSourceDirectories ++= scalaPartialVersion.value.collect {
-      case (2, y) if y == 10            => new File(scalaSource.value.getPath + "_2.10")
-      case (2, y) if y == 11 || y == 12 => new File(scalaSource.value.getPath + "_2.11-12")
-      case (2, y) if y >= 13            => new File(scalaSource.value.getPath + "_2.13")
-    }.toList),
+    inBoth(unmanagedSourceDirectories ++= {
+      val scalaV = scalaVersion.value
+      scalaPartialVersion.value.collect {
+        case (2, y) if y == 10 => List(new File(scalaSource.value.getPath + "_2.10"))
+        case (2, y) if y == 11 => List(
+          new File(scalaSource.value.getPath + "_2.11-12"),
+          new File(scalaSource.value.getPath + "_2.11-13"),
+          new File(scalaSource.value.getPath + "_2.11-only")
+        )
+        case (2, y) if y == 12 => List(
+          new File(scalaSource.value.getPath + "_2.11-12"),
+          new File(scalaSource.value.getPath + "_2.11-13"),
+          new File(scalaSource.value.getPath + "_2.12-13-only")
+        )
+        case (2, y) if y >= 13 => List(
+          new File(scalaSource.value.getPath + "_2.13"),
+          new File(scalaSource.value.getPath + "_2.11-13"),
+          new File(scalaSource.value.getPath + "_2.12-13-only")
+        )
+      }.toList.flatten
+    }),
     // Use a bootstrap compiler bridge to compile the compiler bridge.
     scalaCompilerBridgeSource := {
       val old = scalaCompilerBridgeSource.value

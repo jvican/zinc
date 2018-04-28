@@ -1,0 +1,3 @@
+package xsbt
+
+trait ZincPickleUtils

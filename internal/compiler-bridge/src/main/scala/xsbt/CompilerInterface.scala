@@ -9,10 +9,12 @@ package xsbt
 
 import xsbti.{ AnalysisCallback, Logger, Problem, Reporter }
 import xsbti.compile._
+
 import scala.tools.nsc.Settings
 import scala.collection.mutable
 import Log.debug
 import java.io.File
+import java.net.URI
 
 final class CompilerInterface {
   def newCompiler(options: Array[String],
@@ -29,6 +31,11 @@ final class CompilerInterface {
           progress: CompileProgress,
           cached: CachedCompiler): Unit =
     cached.run(sources, changes, callback, log, delegate, progress)
+
+  def setUpPicklepath(picklepath: Array[URI], cached: CachedCompiler): Unit = cached match {
+    case zincCompiler: CachedCompiler0 => zincCompiler.setUpPicklepath(picklepath.toList)
+    case _                             => ()
+  }
 }
 
 class InterfaceCompileFailed(val arguments: Array[String],
@@ -59,6 +66,12 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
   /////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// INITIALIZATION CODE ////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////
+
+  @volatile var picklepath: List[URI] = Nil
+  def setUpPicklepath(picklepath0: List[URI]): Unit = {
+    picklepath = picklepath0
+    ()
+  }
 
   val settings = new Settings(s => initialLog(s))
   output match {
@@ -100,6 +113,11 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
           log: Logger,
           delegate: Reporter,
           progress: CompileProgress): Unit = synchronized {
+    if (!picklepath.isEmpty) {
+      debug(log, s"Setting up pickle path that contains ${picklepath.mkString(", ")}")
+      compiler.extendClassPathWithPicklePath(picklepath)
+    }
+
     debug(log, infoOnCachedCompiler(hashCode().toLong.toHexString))
     val dreporter = DelegatingReporter(settings, delegate)
     try { run(sources.toList, changes, callback, log, dreporter, progress) } finally {
