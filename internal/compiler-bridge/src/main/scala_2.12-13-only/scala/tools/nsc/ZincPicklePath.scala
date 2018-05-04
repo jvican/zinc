@@ -1,13 +1,13 @@
 package scala.tools.nsc
 
 import java.io.{ ByteArrayInputStream, InputStream }
-import java.net.URI
+import java.net.{ URI, URL }
 
 import xsbt.PicklerGen
 
 import scala.collection.mutable
 import scala.reflect.io.NoAbstractFile
-import scala.tools.nsc.classpath.{ AggregateClassPath, ClassPathFactory }
+import scala.tools.nsc.classpath.{ AggregateClassPath, ClassPathFactory, VirtualDirectoryClassPath }
 import scala.tools.nsc.io.{ AbstractFile, VirtualDirectory, VirtualFile }
 
 trait ZincPicklePath {
@@ -21,10 +21,16 @@ trait ZincPicklePath {
       }
     }
 
-    val pickleClassPaths = rootPickleDirs.map(d => ClassPathFactory.newClassPath(d, settings))
+    val pickleClassPaths = rootPickleDirs.map(d => new ZincVirtualDirectoryClassPath(d))
     val allClassPaths = pickleClassPaths ++ List(platform.classPath)
     val newClassPath = AggregateClassPath.createAggregate(allClassPaths: _*)
     platform.currentClassPath = Some(newClassPath)
+  }
+
+  // We need to override `asURLs` so that the macro classloader ignores pickle paths
+  final class ZincVirtualDirectoryClassPath(dir: VirtualDirectory)
+      extends VirtualDirectoryClassPath(dir) {
+    override def asURLs: Seq[URL] = Nil
   }
 
   /**
