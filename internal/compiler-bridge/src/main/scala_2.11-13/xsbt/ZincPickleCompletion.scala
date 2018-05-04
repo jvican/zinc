@@ -48,7 +48,8 @@ trait ZincPickleCompletion {
       val pickle = modulePickleFile.toByteArray
       unpickler.unpickle(pickle, 0, clazz, module, pickleFile.path)
     } else {
-      sys.error(s"Fatal error: empty pickle found in ${pickleFile.toString}")
+      sys.error(
+        s"Fatal error: empty pickle found in ${pickleFile.toString} for sym ${sym} (${sym.isModule})")
     }
 
     // Copy pasted from ClassfileParser -- figure out if we really need it.

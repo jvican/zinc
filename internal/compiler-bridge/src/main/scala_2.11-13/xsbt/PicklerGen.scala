@@ -54,7 +54,7 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
                */
               List(
                 PickleMapping(javaName, symbol, bytes),
-                PickleMapping(companionJavaName, symbol, Array())
+                PickleMapping(companionJavaName, symbol, bytes)
               )
             } else List(PickleMapping(javaName, symbol, bytes))
           } else {
