@@ -40,7 +40,7 @@ trait ZincPicklePath {
       override val context: ClassPathContext[AbstractFile]
   ) extends DirectoryClassPath(dir, context) {
     override def asURLs: Seq[URL] = Nil
-    override def asClassPathString = ""
+    override def asClassPathString = dir.path
 
     override lazy val (packages, classes) = {
       val classBuf = immutable.Vector.newBuilder[ClassRep]
