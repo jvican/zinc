@@ -10,6 +10,7 @@ package internal
 package inc
 
 import java.io.File
+import java.net.URI
 
 import xsbti.Reporter
 import xsbti.compile.{
@@ -42,6 +43,7 @@ import xsbti.compile.{
 final class CompileConfiguration(
     val sources: Seq[File],
     val classpath: Seq[File],
+    val picklepath: Seq[URI],
     val classpathOptions: ClasspathOptions,
     val previousAnalysis: CompileAnalysis,
     val previousSetup: Option[MiniSetup],

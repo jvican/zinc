@@ -11,6 +11,7 @@ package inc
 
 import java.io.File
 import java.lang.ref.{ Reference, SoftReference }
+import java.net.URI
 import java.util.Optional
 
 import inc.javac.AnalyzingJavaCompiler
@@ -71,17 +72,36 @@ final class MixedAnalyzingCompiler(
         val arguments =
           cArgs(classpathOptions)(Nil, absClasspath, None, options.scalacOptions)
         timed("Scala compilation", log) {
-          compiler.compile(
-            sources.toArray,
-            changes,
-            arguments.toArray,
-            output,
-            callback,
-            reporter,
-            config.cache,
-            log,
-            progress.toOptional
-          )
+          // Set up the pickle path if the underlyin compiler is our analyzing compiler
+          compiler match {
+            case a: AnalyzingCompiler =>
+              a.compileAndSetUpPicklepath(
+                sources.toArray,
+                picklepath.toArray,
+                changes,
+                arguments.toArray,
+                output,
+                callback,
+                reporter,
+                config.cache,
+                log,
+                progress.toOptional
+              )
+            case _ =>
+              if (picklepath.nonEmpty)
+                log.warn(s"Ignoring pickle path because underlying compiler doesn't support it.")
+              compiler.compile(
+                sources.toArray,
+                changes,
+                arguments.toArray,
+                output,
+                callback,
+                reporter,
+                config.cache,
+                log,
+                progress.toOptional
+              )
+          }
         }
       }
 
@@ -169,6 +189,7 @@ object MixedAnalyzingCompiler {
       javac: xsbti.compile.JavaCompiler,
       sources: Seq[File],
       classpath: Seq[File],
+      picklepath: Seq[URI],
       output: Output,
       cache: GlobalsCache,
       progress: Option[CompileProgress] = None,
@@ -210,6 +231,7 @@ object MixedAnalyzingCompiler {
     config(
       sources,
       classpath,
+      picklepath,
       classpathOptions,
       compileSetup,
       progress,
@@ -228,6 +250,7 @@ object MixedAnalyzingCompiler {
   def config(
       sources: Seq[File],
       classpath: Seq[File],
+      picklepath: Seq[URI],
       classpathOptions: ClasspathOptions,
       setup: MiniSetup,
       progress: Option[CompileProgress],
@@ -244,6 +267,7 @@ object MixedAnalyzingCompiler {
     new CompileConfiguration(
       sources,
       classpath,
+      picklepath,
       classpathOptions,
       previousAnalysis,
       previousSetup,

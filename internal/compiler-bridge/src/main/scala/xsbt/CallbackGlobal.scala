@@ -18,7 +18,14 @@ import java.io.File
 sealed abstract class CallbackGlobal(settings: Settings,
                                      reporter: reporters.Reporter,
                                      output: Output)
-    extends Global(settings, reporter) {
+    extends Global(settings, reporter)
+    with ZincPickleUtils
+    with ZincPicklePath {
+
+  override lazy val loaders = new {
+    val global: CallbackGlobal.this.type = CallbackGlobal.this
+    val platform: CallbackGlobal.this.platform.type = CallbackGlobal.this.platform
+  } with ZincSymbolLoaders
 
   def callback: AnalysisCallback
   def findClass(name: String): Option[(AbstractFile, Boolean)]
@@ -109,11 +116,24 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     override val runsBefore = List("erasure")
     // TODO: Consider migrating to "uncurry" for `runsBefore`.
     // TODO: Consider removing the system property to modify which phase is used for API extraction.
-    val runsRightAfter = Option(System.getProperty("sbt.api.phase")) orElse Some("pickler")
+    val runsRightAfter =
+      Option(System.getProperty("sbt.api.phase")) orElse Some(picklerGen.phaseName)
   } with SubComponent {
     val api = new API(global)
     def newPhase(prev: Phase) = api.newPhase(prev)
     def name = phaseName
+  }
+
+  object picklerGen extends {
+    val global: ZincCompiler.this.type = ZincCompiler.this
+    val phaseName = PicklerGen.name
+    val runsAfter = List(pickler.phaseName)
+    override val runsBefore = List(refChecks.phaseName)
+    val runsRightAfter = Some(pickler.phaseName)
+  } with SubComponent {
+    val picklerGenImpl = new PicklerGen(global)
+    def name: String = phaseName
+    def newPhase(prev: Phase): Phase = picklerGenImpl.newPhase(prev)
   }
 
   override lazy val phaseDescriptors = {
@@ -121,6 +141,7 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     if (callback.enabled()) {
       phasesSet += sbtDependency
       phasesSet += apiExtractor
+      phasesSet += picklerGen
     }
     this.computePhaseDescriptors
   }

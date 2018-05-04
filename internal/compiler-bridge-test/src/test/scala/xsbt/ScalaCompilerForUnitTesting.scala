@@ -3,12 +3,15 @@ package xsbt
 import xsbti.TestCallback.ExtractedClassDependencies
 import xsbti.compile.SingleOutput
 import java.io.File
+import java.net.URI
+
 import xsbti._
 import sbt.io.IO.withTemporaryDirectory
 import xsbti.api.ClassLike
-
 import sbt.internal.util.ConsoleLogger
 import xsbti.api.DependencyContext._
+
+import scala.collection.mutable
 
 /**
  * Provides common functionality needed for unit tests that require compiling
@@ -135,10 +138,10 @@ class ScalaCompilerForUnitTesting {
    */
   private[xsbt] def compileSrcs(
       groupedSrcs: List[List[String]],
-      reuseCompilerInstance: Boolean
+      reuseCompilerInstance: Boolean,
+      analysisCallback: TestCallback = new TestCallback
   ): (Seq[File], TestCallback) = {
     withTemporaryDirectory { temp =>
-      val analysisCallback = new TestCallback
       val classesDir = new File(temp, "classes")
       classesDir.mkdir()
 
@@ -168,6 +171,42 @@ class ScalaCompilerForUnitTesting {
       }
       (files.flatten, analysisCallback)
     }
+  }
+
+  case class Project(srcs: List[String], callback: TestCallback)
+  case class CompilationResult(classesDir: File, testCallback: TestCallback, compiler: ZincCompiler)
+  private[xsbt] def compileProject(
+      project: Project,
+      classpath: List[File],
+      picklePath: List[URI],
+      maybeCompiler: Option[ZincCompiler] = None
+  ): CompilationResult = {
+    val callback = project.callback
+    def compile(temp: File): CompilationResult = {
+      val classesDir = new File(temp, "classes")
+      classesDir.deleteOnExit()
+      classesDir.mkdir()
+      val fullClasspath = (classpath).map(_.getAbsolutePath).mkString(":")
+      val compiler = maybeCompiler
+        .map(p => { p.set(callback, p.reporter.asInstanceOf[DelegatingReporter]); p })
+        .getOrElse(prepareCompiler(classesDir, callback, fullClasspath))
+      if (!picklePath.isEmpty)
+        compiler.extendClassPathWithPicklePath(picklePath)
+      val run = new compiler.Run
+      val srcFiles = project.srcs.zipWithIndex map {
+        case (src, i) =>
+          val fileName = s"Test-$i.scala"
+          prepareSrcFile(temp, fileName, src)
+      }
+
+      val srcFilePaths = srcFiles.map(srcFile => srcFile.getAbsolutePath).toList
+      run.compile(srcFilePaths)
+
+      srcFilePaths.foreach(f => new File(f).delete)
+      CompilationResult(classesDir, callback, compiler)
+    }
+
+    withTemporaryDirectory(compile(_), true)
   }
 
   private def compileSrcs(srcs: String*): (Seq[File], TestCallback) = {

@@ -10,7 +10,9 @@ package internal
 package inc
 
 import java.io.File
+import java.net.URI
 import java.util.Optional
+import java.util.concurrent.CompletableFuture
 import java.util.function.{ Function => JavaFunction }
 
 import sbt.internal.inc.JavaInterfaceUtil._
@@ -52,6 +54,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       javacChosen,
       sources,
       classpath,
+      picklepath,
       CompileOutput(classesDirectory),
       cache,
       progress().toOption,
@@ -65,7 +68,8 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       order,
       skip,
       incrementalCompilerOptions,
-      extraOptions
+      extraOptions,
+      picklePromise.toOption
     )(logger)
   }
 
@@ -131,6 +135,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       javaCompiler,
       sources,
       classpath.toSeq,
+      Nil,
       output,
       cache,
       progress.toOption,
@@ -144,7 +149,8 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       compileOrder,
       skip: Boolean,
       incrementalOptions,
-      extraInScala
+      extraInScala,
+      None
     )(logger)
   }
 
@@ -223,6 +229,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       javaCompiler: xsbti.compile.JavaCompiler,
       sources: Array[File],
       classpath: Seq[File],
+      picklepath: Seq[URI],
       output: Output,
       cache: GlobalsCache,
       progress: Option[CompileProgress] = None,
@@ -236,7 +243,8 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       compileOrder: CompileOrder = Mixed,
       skip: Boolean = false,
       incrementalOptions: IncOptions,
-      extra: List[(String, String)]
+      extra: List[(String, String)],
+      picklePromise: Option[CompletableFuture[URI]]
   )(implicit logger: Logger): CompileResult = {
     handleCompilationError(sources, output, logger) {
       val prev = previousAnalysis match {
@@ -248,6 +256,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
         javaCompiler,
         sources,
         classpath,
+        picklepath,
         output,
         cache,
         progress,
@@ -267,6 +276,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       else {
         val (analysis, changed) = compileInternal(
           MixedAnalyzingCompiler(config)(logger),
+          picklePromise,
           MiniSetupUtil.equivCompileSetup,
           MiniSetupUtil.equivPairs,
           logger
@@ -283,6 +293,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
    */
   private[sbt] def compileInternal(
       mixedCompiler: MixedAnalyzingCompiler,
+      picklePromise: Option[CompletableFuture[URI]],
       equiv: Equiv[MiniSetup],
       equivPairs: Equiv[Array[T2[String, String]]],
       log: Logger
@@ -311,7 +322,8 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       analysis,
       output,
       log,
-      incOptions
+      incOptions,
+      picklePromise
     )
     compile.swap
   }
