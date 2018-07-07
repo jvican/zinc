@@ -40,7 +40,7 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
           if (symbol.isModule) {
             if (symbol.companionClass == NoSymbol) {
               val companionJavaName = symbol.fullName('/')
-              println(s"Companion java name ${companionJavaName} vs name $javaName")
+              debuglog(s"Companion java name ${companionJavaName} vs name $javaName")
 
               /**
                * Scalac's completion engine assumes that for every module there
