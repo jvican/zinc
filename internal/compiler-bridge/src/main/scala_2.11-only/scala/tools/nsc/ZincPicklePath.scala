@@ -10,7 +10,7 @@ import scala.tools.nsc.util.ClassPath.ClassPathContext
 import scala.tools.nsc.util.{DirectoryClassPath, MergedClassPath}
 
 trait ZincPicklePath {
-  self: Global with ZincPickleUtils =>
+  self: Global =>
 
   def extendClassPathWithPicklePath(picklepath: List[URI]): Unit = {
     val rootPickleDirs = picklepath.map { entry =>
