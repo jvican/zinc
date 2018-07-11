@@ -2,7 +2,7 @@ package scala.tools.nsc
 
 import java.net.{URI, URL}
 
-import xsbt.{PicklerGen, ZincPickleUtils}
+import xsbt.{PicklerGen, PickleVirtualDirectory, PickleVirtualFile}
 
 import scala.collection.immutable
 import scala.tools.nsc.io.AbstractFile

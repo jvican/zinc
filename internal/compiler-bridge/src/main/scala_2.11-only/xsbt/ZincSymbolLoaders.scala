@@ -1,7 +1,5 @@
 package xsbt
 
-import xsbt.{ ZincPickleCompletion, PicklerGen }
-
 import scala.tools.nsc.GlobalSymbolLoaders
 import scala.tools.nsc.io.AbstractFile
 import scala.tools.nsc.util.ClassRepresentation
