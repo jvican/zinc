@@ -75,6 +75,15 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
 
   object dummy // temporary fix for #4426
 
+  override lazy val analyzer = new {
+    val global: ZincCompiler.this.type = ZincCompiler.this
+  } with typechecker.Analyzer {
+    override def typedMacroBody(typer: Typer, macroDdef: DefDef): Tree = {
+      println("I'm trying to typecheck macro yay!")
+      super.typedMacroBody(typer, macroDdef)
+    }
+  }
+
   /** Phase that analyzes the generated class files and maps them to sources. */
   object sbtAnalyzer extends {
     val global: ZincCompiler.this.type = ZincCompiler.this
