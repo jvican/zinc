@@ -467,8 +467,8 @@
         { "name": "extra", "type": "xsbti.T2<String, String>*" },
         {
           "name": "picklePromise",
-          "type": "java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>>",
-          "default": "java.util.Optional.empty()",
+          "type": "java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>>",
+          "default": "defaultPicklePromise()",
           "doc": [
             "Allows the analysis callback to complete the future when",
             "the compiler is past the pickler gen phase, so that compilation",
@@ -476,6 +476,14 @@
           ],
           "since": "1.2.0"
         }
+      ],
+
+      "extra": [
+        "public static java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> defaultPicklePromise() {",
+        "    java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> p = new java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>>();",
+        "    p.complete(java.util.Optional.empty());",
+        "    return p;",
+        "}"
       ]
     },
     {

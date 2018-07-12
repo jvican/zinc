@@ -6,17 +6,21 @@
 package xsbti.compile;
 /** Configures incremental recompilation. */
 public final class Setup implements java.io.Serializable {
-    
+    public static java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> defaultPicklePromise() {
+        java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> p = new java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>>();
+        p.complete(java.util.Optional.empty());
+        return p;
+    }
     public static Setup create(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra) {
         return new Setup(_perClasspathEntryLookup, _skip, _cacheFile, _cache, _incrementalCompilerOptions, _reporter, _progress, _extra);
     }
     public static Setup of(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra) {
         return new Setup(_perClasspathEntryLookup, _skip, _cacheFile, _cache, _incrementalCompilerOptions, _reporter, _progress, _extra);
     }
-    public static Setup create(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> _picklePromise) {
+    public static Setup create(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> _picklePromise) {
         return new Setup(_perClasspathEntryLookup, _skip, _cacheFile, _cache, _incrementalCompilerOptions, _reporter, _progress, _extra, _picklePromise);
     }
-    public static Setup of(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> _picklePromise) {
+    public static Setup of(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> _picklePromise) {
         return new Setup(_perClasspathEntryLookup, _skip, _cacheFile, _cache, _incrementalCompilerOptions, _reporter, _progress, _extra, _picklePromise);
     }
     /** Provides a lookup of data structures and operations associated with a single classpath entry. */
@@ -41,7 +45,7 @@ public final class Setup implements java.io.Serializable {
      * the compiler is past the pickler gen phase, so that compilation
      * clients can potentially start compilation of downstream projects.
      */
-    private java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> picklePromise;
+    private java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> picklePromise;
     protected Setup(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra) {
         super();
         perClasspathEntryLookup = _perClasspathEntryLookup;
@@ -52,9 +56,9 @@ public final class Setup implements java.io.Serializable {
         reporter = _reporter;
         progress = _progress;
         extra = _extra;
-        picklePromise = java.util.Optional.empty();
+        picklePromise = defaultPicklePromise();
     }
-    protected Setup(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> _picklePromise) {
+    protected Setup(xsbti.compile.PerClasspathEntryLookup _perClasspathEntryLookup, boolean _skip, java.io.File _cacheFile, xsbti.compile.GlobalsCache _cache, xsbti.compile.IncOptions _incrementalCompilerOptions, xsbti.Reporter _reporter, java.util.Optional<xsbti.compile.CompileProgress> _progress, xsbti.T2<String, String>[] _extra, java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> _picklePromise) {
         super();
         perClasspathEntryLookup = _perClasspathEntryLookup;
         skip = _skip;
@@ -90,7 +94,7 @@ public final class Setup implements java.io.Serializable {
     public xsbti.T2<String, String>[] extra() {
         return this.extra;
     }
-    public java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> picklePromise() {
+    public java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> picklePromise() {
         return this.picklePromise;
     }
     public Setup withPerClasspathEntryLookup(xsbti.compile.PerClasspathEntryLookup perClasspathEntryLookup) {
@@ -117,7 +121,7 @@ public final class Setup implements java.io.Serializable {
     public Setup withExtra(xsbti.T2<String, String>[] extra) {
         return new Setup(perClasspathEntryLookup, skip, cacheFile, cache, incrementalCompilerOptions, reporter, progress, extra, picklePromise);
     }
-    public Setup withPicklePromise(java.util.Optional<java.util.concurrent.CompletableFuture<java.net.URI>> picklePromise) {
+    public Setup withPicklePromise(java.util.concurrent.CompletableFuture<java.util.Optional<java.net.URI>> picklePromise) {
         return new Setup(perClasspathEntryLookup, skip, cacheFile, cache, incrementalCompilerOptions, reporter, progress, extra, picklePromise);
     }
     public boolean equals(Object obj) {

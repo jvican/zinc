@@ -18,12 +18,17 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
     // Keep in mind that we need to index based on the flattened name
     override def run(): Unit = {
       val start = System.currentTimeMillis
-      super.run()
-      val mappings = toMappings(global.currentRun.symData)
-      val handle = genPickleURI
-      val rootVirtual = toVirtualFile(mappings)
-      PicklerGen.urisToRoot.+=((handle, rootVirtual))
-      callback.picklerPhaseCompleted(handle)
+      global.foundMacroLocation match {
+        case Some(location) =>
+          warning(s"Found macro at $location; pipelining is disabled for this module.")
+        case None =>
+          super.run()
+          val mappings = toMappings(global.currentRun.symData)
+          val handle = genPickleURI
+          val rootVirtual = toVirtualFile(mappings)
+          PicklerGen.urisToRoot.+=((handle, rootVirtual))
+          callback.picklerPhaseCompleted(handle)
+      }
       val stop = System.currentTimeMillis
       debuglog("Picklergen phase took : " + ((stop - start) / 1000.0) + " s")
     }

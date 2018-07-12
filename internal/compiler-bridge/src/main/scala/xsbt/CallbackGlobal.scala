@@ -15,10 +15,11 @@ import io.AbstractFile
 import java.io.File
 
 /** Defines the interface of the incremental compiler hiding implementation details. */
-sealed abstract class CallbackGlobal(settings: Settings,
-                                     reporter: reporters.Reporter,
-                                     output: Output)
-    extends Global(settings, reporter)
+sealed abstract class CallbackGlobal(
+    settings: Settings,
+    reporter: reporters.Reporter,
+    output: Output
+) extends Global(settings, reporter)
     with ZincPicklePath {
 
   override lazy val loaders = new {
@@ -26,6 +27,7 @@ sealed abstract class CallbackGlobal(settings: Settings,
     val platform: CallbackGlobal.this.platform.type = CallbackGlobal.this.platform
   } with ZincSymbolLoaders
 
+  def foundMacroLocation: Option[String]
   def callback: AnalysisCallback
   def findClass(name: String): Option[(AbstractFile, Boolean)]
 
@@ -75,11 +77,13 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
 
   object dummy // temporary fix for #4426
 
+  var foundMacroLocation: Option[String] = None
   override lazy val analyzer = new {
     val global: ZincCompiler.this.type = ZincCompiler.this
   } with typechecker.Analyzer {
     override def typedMacroBody(typer: Typer, macroDdef: DefDef): Tree = {
-      println("I'm trying to typecheck macro yay!")
+      // Disable pipelining if macros are defined in this project
+      if (foundMacroLocation.isEmpty) foundMacroLocation = Some(macroDdef.symbol.fullLocationString)
       super.typedMacroBody(typer, macroDdef)
     }
   }
@@ -139,9 +143,8 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     override val runsBefore = List(refChecks.phaseName)
     val runsRightAfter = Some(pickler.phaseName)
   } with SubComponent {
-    val picklerGenImpl = new PicklerGen(global)
     def name: String = phaseName
-    def newPhase(prev: Phase): Phase = picklerGenImpl.newPhase(prev)
+    def newPhase(prev: Phase): Phase = new PicklerGen(global).newPhase(prev)
   }
 
   override lazy val phaseDescriptors = {

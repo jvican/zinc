@@ -25,6 +25,7 @@ import sbt.util.InterfaceUtil.jo2o
 import java.io.File
 import java.net.URI
 import java.util
+import java.util.Optional
 import java.util.concurrent.CompletableFuture
 
 import xsbti.api.DependencyContext
@@ -58,7 +59,7 @@ object IncrementalCompile {
       output: Output,
       log: Logger,
       options: IncOptions,
-      picklePromise: Option[CompletableFuture[URI]]
+      picklePromise: CompletableFuture[Optional[URI]]
   ): (Boolean, Analysis) = {
     val previous = previous0 match { case a: Analysis => a }
     val current = Stamps.initial(Stamper.forLastModified, Stamper.forHash, Stamper.forLastModified)
@@ -112,7 +113,7 @@ private object AnalysisCallback {
       current: ReadStamps,
       output: Output,
       options: IncOptions,
-      picklePromise: Option[CompletableFuture[URI]]
+      picklePromise: CompletableFuture[Optional[URI]]
   ) {
     def build(): AnalysisCallback = new AnalysisCallback(
       internalBinaryToSourceClassName,
@@ -133,7 +134,7 @@ private final class AnalysisCallback(
     stampReader: ReadStamps,
     output: Output,
     options: IncOptions,
-    picklePromise: Option[CompletableFuture[URI]]
+    picklePromise: CompletableFuture[Optional[URI]]
 ) extends xsbti.AnalysisCallback {
 
   private[this] val compilation: Compilation = Compilation(output)
@@ -387,6 +388,6 @@ private final class AnalysisCallback(
   override def apiPhaseCompleted(): Unit = {}
   override def dependencyPhaseCompleted(): Unit = {}
   override def picklerPhaseCompleted(handle: URI): Unit = {
-    picklePromise.foreach(_.complete(handle))
+    picklePromise.complete(Optional.of(handle))
   }
 }

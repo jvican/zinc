@@ -69,7 +69,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       skip,
       incrementalCompilerOptions,
       extraOptions,
-      picklePromise.toOption
+      picklePromise
     )(logger)
   }
 
@@ -150,7 +150,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       skip: Boolean,
       incrementalOptions,
       extraInScala,
-      None
+      Setup.defaultPicklePromise()
     )(logger)
   }
 
@@ -244,7 +244,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
       skip: Boolean = false,
       incrementalOptions: IncOptions,
       extra: List[(String, String)],
-      picklePromise: Option[CompletableFuture[URI]]
+      picklePromise: CompletableFuture[Optional[URI]]
   )(implicit logger: Logger): CompileResult = {
     handleCompilationError(sources, output, logger) {
       val prev = previousAnalysis match {
@@ -293,7 +293,7 @@ class IncrementalCompilerImpl extends IncrementalCompiler {
    */
   private[sbt] def compileInternal(
       mixedCompiler: MixedAnalyzingCompiler,
-      picklePromise: Option[CompletableFuture[URI]],
+      picklePromise: CompletableFuture[Optional[URI]],
       equiv: Equiv[MiniSetup],
       equivPairs: Equiv[Array[T2[String, String]]],
       log: Logger
