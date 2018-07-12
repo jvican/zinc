@@ -33,7 +33,10 @@ abstract class ZincSymbolLoaders extends GlobalSymbolLoaders with ZincPickleComp
 
     override def description = "pickle file from " + pickleFile.toString
     override def doComplete(sym: symbolTable.Symbol): Unit = {
-      val clazz = if (sym.isModule) sym.companionClass else sym
+      val clazz = if (sym.isModule) {
+        val s = sym.companionClass
+        if (s == NoSymbol) sym.moduleClass else s
+      } else sym
       val module = if (sym.isModule) sym else sym.companionModule
       pickleComplete(pickleFile, clazz.asClass, module.asModule, sym)
     }
