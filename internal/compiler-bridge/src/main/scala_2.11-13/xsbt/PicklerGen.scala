@@ -20,7 +20,8 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
       val start = System.currentTimeMillis
       global.foundMacroLocation match {
         case Some(location) =>
-          warning(s"Found macro at $location; pipelining is disabled for this module.")
+          val msg = s"Found macro at $location; pipelining is disabled for this module."
+          if (settings.fatalWarnings) inform(msg) else warning(msg)
         case None =>
           super.run()
           val mappings = toMappings(global.currentRun.symData)
