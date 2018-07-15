@@ -138,15 +138,27 @@ sealed class ZincCompiler(settings: ZincSettings, dreporter: DelegatingReporter,
 
     override def patDefOrDcl(pos: RunId, mods: Modifiers): List[Tree] = {
       super.patDefOrDcl(pos, mods).mapConserve {
-        case vd: ValDef => if (canDropBody(vd)) vd.copy(rhs = UndefinedTree) else vd
-        case t          => t
+        case vd: ValDef if canDropBody(vd) => vd.copy(rhs = UndefinedTree)
+        case t                             => t
+      }
+    }
+
+    private val TailRecName = TypeName("tailrec")
+    def stripTailRec(mods: Modifiers): Modifiers = {
+      mods.mapAnnotations { annotations =>
+        annotations.filter {
+          case Apply(Select(New(Ident(TailRecName)), _), _)     => false
+          case Apply(Select(New(Select(_, TailRecName)), _), _) => false
+          case _                                                => true
+        }
       }
     }
 
     override def funDefOrDcl(start: RunId, mods: Modifiers): Tree = {
       super.funDefOrDcl(start, mods) match {
-        case dd: DefDef => if (canDropBody(dd)) dd.copy(rhs = UndefinedTree) else dd
-        case t          => t
+        case dd: DefDef if canDropBody(dd) =>
+          dd.copy(mods = stripTailRec(dd.mods), rhs = UndefinedTree)
+        case t => t
       }
     }
 

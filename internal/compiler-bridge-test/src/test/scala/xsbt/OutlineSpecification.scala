@@ -18,6 +18,11 @@ class OutlineSpecification extends UnitSpec {
         |  new TemplateExpr
         |
         |  def hello2(o: AnyRef): Int = {
+        |    @scala.annotation.tailrec def t(i: Int): Int = {
+        |      if (t == 0) t
+        |      else t(i-1)
+        |    }
+        |
         |    println(new InsideDef)
         |    try {
         |      println(new InsideDef)
@@ -31,6 +36,17 @@ class OutlineSpecification extends UnitSpec {
         |  val hello: Int = {
         |    new InsideDef
         |    1
+        |  }
+        |
+        |  @scala.annotation.tailrec def t(i: Int): Int = {
+        |    if (i == 0) i
+        |    else t(i-1)
+        |  }
+        |
+        |  import scala.annotation.tailrec
+        |  @tailrec def t2(i: Int): Int = {
+        |    if (i == 0) i
+        |    else t2(i-1)
         |  }
         |}
         |
