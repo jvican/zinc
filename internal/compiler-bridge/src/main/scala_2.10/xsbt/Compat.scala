@@ -175,7 +175,7 @@ object Compat {
 
 private trait CachedCompilerCompat { self: CachedCompiler0 =>
   def newCompiler(
-      settings: Settings,
+      settings: ZincSettings,
       reporter: DelegatingReporter,
       output: Output
   ): ZincCompiler = {

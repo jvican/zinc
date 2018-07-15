@@ -12,6 +12,7 @@ class PickleIndexSpecification extends UnitSpec {
   }
 
   def runTest(): Unit = {
+    val pickleArgs = List("-Ygenerate-pickles")
     var generatedIndex: Boolean = false
     var handles: List[URI] = Nil
     object IndexTestCallback extends TestCallback {
@@ -84,11 +85,11 @@ class PickleIndexSpecification extends UnitSpec {
       """.stripMargin
 
     val compiler = new ScalaCompilerForUnitTesting
-    val projectA = compiler.Project(List(sourceA), IndexTestCallback)
-    val projectB = compiler.Project(List(sourceB), IndexTestCallback)
-    val projectC = compiler.Project(List(sourceC), IndexTestCallback)
-    val projectD = compiler.Project(List(sourceD), IndexTestCallback)
-    val projectE = compiler.Project(List(sourceE), IndexTestCallback)
+    val projectA = compiler.Project(List(sourceA), IndexTestCallback, pickleArgs)
+    val projectB = compiler.Project(List(sourceB), IndexTestCallback, pickleArgs)
+    val projectC = compiler.Project(List(sourceC), IndexTestCallback, pickleArgs)
+    val projectD = compiler.Project(List(sourceD), IndexTestCallback, pickleArgs)
+    val projectE = compiler.Project(List(sourceE), IndexTestCallback, pickleArgs)
 
     // The compilation is sequential (whereas it could be in parallel), but there
     // is no resource sharing (e.g. class dirs) so it emulates a real-world scenario.
@@ -150,8 +151,8 @@ class PickleIndexSpecification extends UnitSpec {
     }
 
     // Check that the symbol table is not shared across different compiler instances
-    val projectA2 = compiler.Project(List(sourceA2), IndexTestCallback2)
-    val projectB2 = compiler.Project(List(sourceB2), IndexTestCallback2)
+    val projectA2 = compiler.Project(List(sourceA2), IndexTestCallback2, pickleArgs)
+    val projectB2 = compiler.Project(List(sourceB2), IndexTestCallback2, pickleArgs)
     compiler.compileProject(projectA2, Nil, Nil)
     println("Project A is compiled again with modifications.")
     compiler.compileProject(projectB2, Nil, handles2)
