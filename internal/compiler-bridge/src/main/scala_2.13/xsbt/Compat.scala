@@ -28,6 +28,9 @@ trait ZincGlobalCompat {
 }
 
 private trait CachedCompilerCompat { self: CachedCompiler0 =>
-  def newCompiler(settings: Settings, reporter: DelegatingReporter, output: Output): ZincCompiler =
-    new ZincCompiler(settings, reporter, output)
+  def newCompiler(
+      settings: ZincSettings,
+      reporter: DelegatingReporter,
+      output: Output
+  ): ZincCompiler = new ZincCompiler(settings, reporter, output)
 }

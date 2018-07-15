@@ -378,6 +378,7 @@ lazy val compilerBridge: Project = (project in internalPath / "compiler-bridge")
     crossScalaVersions := compilerBridgeScalaVersions,
     compilerVersionDependentScalacOptions,
     libraryDependencies += scalaCompiler.value % "provided",
+    libraryDependencies += "com.github.wumpz" % "diffutils" % "2.2",
     autoScalaLibrary := false,
     // precompiledSettings,
     name := "Compiler Bridge",
