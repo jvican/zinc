@@ -14,6 +14,8 @@ import scala.tools.nsc._
 import io.AbstractFile
 import java.io.File
 
+import com.github.difflib.{ DiffUtils, UnifiedDiffUtils }
+
 /** Defines the interface of the incremental compiler hiding implementation details. */
 sealed abstract class CallbackGlobal(
     settings: Settings,
@@ -63,10 +65,22 @@ sealed abstract class CallbackGlobal(
   private[xsbt] val localToNonLocalClass = new LocalToNonLocalClass[this.type](this)
 }
 
+final class ZincSettings(errorFn: String => Unit) extends Settings(errorFn) {
+  val YgeneratePickles =
+    BooleanSetting("-Ygenerate-pickles", "Generate pickles for parallel or pipelined compilation.")
+  val Youtline = BooleanSetting("-Youtline", "Enable type outlining.")
+  val YoutlineDiff =
+    BooleanSetting("-Youtline-diff", "Diff the outlined and non-outlined compilation units.")
+}
+
 /** Defines the implementation of Zinc with all its corresponding phases. */
-sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, output: Output)
-    extends CallbackGlobal(settings, dreporter, output)
-    with ZincGlobalCompat {
+sealed class ZincCompiler(
+    override val settings: ZincSettings,
+    dreporter: DelegatingReporter,
+    output: Output
+) extends CallbackGlobal(settings, dreporter, output)
+    with ZincGlobalCompat
+    with ZincOutlining {
 
   final class ZincRun(compileProgress: CompileProgress) extends Run {
     override def informUnitStarting(phase: Phase, unit: CompilationUnit): Unit =
@@ -128,8 +142,12 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     override val runsBefore = List("erasure")
     // TODO: Consider migrating to "uncurry" for `runsBefore`.
     // TODO: Consider removing the system property to modify which phase is used for API extraction.
-    val runsRightAfter =
-      Option(System.getProperty("sbt.api.phase")) orElse Some(picklerGen.phaseName)
+    val runsRightAfter = {
+      Option(System.getProperty("sbt.api.phase")).orElse {
+        if (settings.YgeneratePickles.value) Some(picklerGen.phaseName)
+        else Some(pickler.phaseName)
+      }
+    }
   } with SubComponent {
     val api = new API(global)
     def newPhase(prev: Phase) = api.newPhase(prev)
@@ -152,8 +170,9 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     if (callback.enabled()) {
       phasesSet += sbtDependency
       phasesSet += apiExtractor
-      phasesSet += picklerGen
     }
+    if (settings.YgeneratePickles.value)
+      phasesSet += picklerGen
     this.computePhaseDescriptors
   }
 
@@ -196,6 +215,9 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
 }
 
 import scala.reflect.internal.Positions
-final class ZincCompilerRangePos(settings: Settings, dreporter: DelegatingReporter, output: Output)
-    extends ZincCompiler(settings, dreporter, output)
+final class ZincCompilerRangePos(
+    settings: ZincSettings,
+    dreporter: DelegatingReporter,
+    output: Output
+) extends ZincCompiler(settings, dreporter, output)
     with Positions

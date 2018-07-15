@@ -414,6 +414,7 @@ lazy val compilerBridgeTemplate: Project = (project in internalPath / "compiler-
     noSourcesForTemplate,
     compilerVersionDependentScalacOptions,
     libraryDependencies += scalaCompiler.value % "provided",
+    libraryDependencies += "com.github.wumpz" % "diffutils" % "2.2",
     autoScalaLibrary := false,
     // precompiledSettings,
     name := "Compiler Bridge",
@@ -423,11 +424,12 @@ lazy val compilerBridgeTemplate: Project = (project in internalPath / "compiler-
       scalaPartialVersion.value.collect {
         case (2, y) if y == 10 => List(new File(scalaSource.value.getPath + "_2.10"))
         case (2, y) if y == 11 => List(
+          new File(scalaSource.value.getPath + "_2.11"),
           new File(scalaSource.value.getPath + "_2.11-12"),
-          new File(scalaSource.value.getPath + "_2.11-13"),
-          new File(scalaSource.value.getPath + "_2.11-only")
+          new File(scalaSource.value.getPath + "_2.11-13")
         )
         case (2, y) if y == 12 => List(
+          new File(scalaSource.value.getPath + "_2.12"),
           new File(scalaSource.value.getPath + "_2.11-12"),
           new File(scalaSource.value.getPath + "_2.11-13"),
           new File(scalaSource.value.getPath + "_2.12-13-only")

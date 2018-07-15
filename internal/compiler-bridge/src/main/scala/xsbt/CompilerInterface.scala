@@ -10,7 +10,6 @@ package xsbt
 import xsbti.{ AnalysisCallback, Logger, Problem, Reporter }
 import xsbti.compile._
 
-import scala.tools.nsc.Settings
 import scala.collection.mutable
 import Log.debug
 import java.io.File
@@ -73,7 +72,7 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
     ()
   }
 
-  val settings = new Settings(s => initialLog(s))
+  val settings = new ZincSettings(s => initialLog(s))
   output match {
     case multi: MultipleOutput =>
       for (out <- multi.getOutputGroups)
@@ -94,7 +93,10 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
   } finally initialLog.clear()
 
   /** Instance of the underlying Zinc compiler. */
-  val compiler: ZincCompiler = newCompiler(command.settings, dreporter, output)
+  val compiler: ZincCompiler = {
+    val settings = command.settings.asInstanceOf[ZincSettings]
+    newCompiler(settings, dreporter, output)
+  }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////
 

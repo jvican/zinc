@@ -103,17 +103,7 @@ class ScalaCompilerForUnitTesting {
    */
   def extractDependenciesFromSrcs(srcs: List[List[String]]): ExtractedClassDependencies = {
     val (_, testCallback) = compileSrcs(srcs, reuseCompilerInstance = true)
-
-    val memberRefDeps = testCallback.classDependencies collect {
-      case (target, src, DependencyByMemberRef) => (src, target)
-    }
-    val inheritanceDeps = testCallback.classDependencies collect {
-      case (target, src, DependencyByInheritance) => (src, target)
-    }
-    val localInheritanceDeps = testCallback.classDependencies collect {
-      case (target, src, LocalDependencyByInheritance) => (src, target)
-    }
-    ExtractedClassDependencies.fromPairs(memberRefDeps, inheritanceDeps, localInheritanceDeps)
+    TestCallback.fromCallback(testCallback)
   }
 
   def extractDependenciesFromSrcs(srcs: String*): ExtractedClassDependencies = {
@@ -173,7 +163,7 @@ class ScalaCompilerForUnitTesting {
     }
   }
 
-  case class Project(srcs: List[String], callback: TestCallback)
+  case class Project(srcs: List[String], callback: TestCallback, compilerArgs: List[String] = Nil)
   case class CompilationResult(classesDir: File, testCallback: TestCallback, compiler: ZincCompiler)
   private[xsbt] def compileProject(
       project: Project,
@@ -189,7 +179,7 @@ class ScalaCompilerForUnitTesting {
       val fullClasspath = (classpath).map(_.getAbsolutePath).mkString(":")
       val compiler = maybeCompiler
         .map(p => { p.set(callback, p.reporter.asInstanceOf[DelegatingReporter]); p })
-        .getOrElse(prepareCompiler(classesDir, callback, fullClasspath))
+        .getOrElse(prepareCompiler(classesDir, callback, fullClasspath, project.compilerArgs))
       if (!picklePath.isEmpty)
         compiler.extendClassPathWithPicklePath(picklePath)
       val run = new compiler.Run
@@ -219,10 +209,13 @@ class ScalaCompilerForUnitTesting {
     srcFile
   }
 
-  private[xsbt] def prepareCompiler(outputDir: File,
-                                    analysisCallback: AnalysisCallback,
-                                    classpath: String = "."): ZincCompiler = {
-    val args = Array.empty[String]
+  private[xsbt] def prepareCompiler(
+      outputDir: File,
+      analysisCallback: AnalysisCallback,
+      classpath: String = ".",
+      compilerArgs: List[String] = Nil
+  ): ZincCompiler = {
+    val args = compilerArgs.toArray
     object output extends SingleOutput {
       def getOutputDirectory: File = outputDir
       override def toString = s"SingleOutput($getOutputDirectory)"
