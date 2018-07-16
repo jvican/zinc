@@ -66,6 +66,8 @@ sealed abstract class CallbackGlobal(
 }
 
 final class ZincSettings(errorFn: String => Unit) extends Settings(errorFn) {
+  val YgeneratePickles =
+    BooleanSetting("-Ygenerate-pickles", "Generate pickles for parallel or pipelined compilation.")
   val Youtline = BooleanSetting("-Youtline", "Enable type outlining.")
   val YoutlineDiff =
     BooleanSetting("-Youtline-diff", "Diff the outlined and non-outlined compilation units.")
@@ -239,8 +241,12 @@ sealed class ZincCompiler(settings: ZincSettings, dreporter: DelegatingReporter,
     override val runsBefore = List("erasure")
     // TODO: Consider migrating to "uncurry" for `runsBefore`.
     // TODO: Consider removing the system property to modify which phase is used for API extraction.
-    val runsRightAfter =
-      Option(System.getProperty("sbt.api.phase")) orElse Some(picklerGen.phaseName)
+    val runsRightAfter = {
+      Option(System.getProperty("sbt.api.phase")).orElse {
+        if (settings.YgeneratePickles.value) Some(picklerGen.phaseName)
+        else Some(pickler.phaseName)
+      }
+    }
   } with SubComponent {
     val api = new API(global)
     def newPhase(prev: Phase) = api.newPhase(prev)
@@ -263,8 +269,9 @@ sealed class ZincCompiler(settings: ZincSettings, dreporter: DelegatingReporter,
     if (callback.enabled()) {
       phasesSet += sbtDependency
       phasesSet += apiExtractor
-      phasesSet += picklerGen
     }
+    if (settings.YgeneratePickles.value)
+      phasesSet += picklerGen
     this.computePhaseDescriptors
   }
 
