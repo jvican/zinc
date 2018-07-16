@@ -66,6 +66,8 @@ sealed abstract class CallbackGlobal(
 }
 
 final class ZincSettings(errorFn: String => Unit) extends Settings(errorFn) {
+  val YgenPickler =
+    BooleanSetting("-Ygen-pickler", "Generate pickles for parallel or pipelined compilation.")
   val Youtline = BooleanSetting("-Youtline", "Enable type outlining.")
   val YoutlineDiff =
     BooleanSetting("-Youtline-diff", "Diff the outlined and non-outlined compilation units.")
@@ -263,8 +265,9 @@ sealed class ZincCompiler(settings: ZincSettings, dreporter: DelegatingReporter,
     if (callback.enabled()) {
       phasesSet += sbtDependency
       phasesSet += apiExtractor
-      phasesSet += picklerGen
     }
+    if (settings.YgenPickler.value)
+      phasesSet += picklerGen
     this.computePhaseDescriptors
   }
 
