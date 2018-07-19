@@ -1,6 +1,6 @@
 package xsbt
 
-trait ZincOutlining {
+trait ZincOutlining extends ZincStatistics {
   self: ZincCompiler =>
 
   override def newUnitParser(unit: CompilationUnit): syntaxAnalyzer.UnitParser = {
@@ -11,7 +11,7 @@ trait ZincOutlining {
   import syntaxAnalyzer.UnitParser
   final class ZincUnitParser(unit: CompilationUnit) extends UnitParser(unit) {
     def diff(outlined: Tree, normal: Tree): Unit = {
-      import com.github.difflib.{DiffUtils, UnifiedDiffUtils}
+      import com.github.difflib.{ DiffUtils, UnifiedDiffUtils }
       import scala.collection.JavaConverters._
       import java.nio.file.{ Files, Paths }
       val original = showCode(normal)
@@ -26,12 +26,14 @@ trait ZincOutlining {
     }
 
     override def parse(): Tree = {
-      val outlined = super.parse()
-      if (!settings.YoutlineDiff.value) outlined
+      val outlinedTree = super.parse()
+      lazy val originalTree = new UnitParser(unit).parse()
+      reportTotal(originalTree)
+
+      if (!settings.YoutlineDiff.value) outlinedTree
       else {
-        val normal = new UnitParser(unit).parse()
-        diff(outlined, normal)
-        outlined
+        diff(outlinedTree, originalTree)
+        outlinedTree
       }
     }
 
@@ -45,10 +47,10 @@ trait ZincOutlining {
 
     private def canDropBody(definition: ValOrDefDef): Boolean = ! {
       definition.tpt.isEmpty || // Cannot drop if we need scalac to infer the type
-        definition.rhs.isEmpty || // Cannot drop if body is already empty
-        //definition.name == nme.ANON_FUN_NAME || // Cannot drop because they constrain type args
-        definition.mods.isFinal && definition.rhs.isInstanceOf[Literal] || // Constant folding
-        containsSuperAccessor(definition.rhs) // Cannot drop super accessors, they affect public API
+      definition.rhs.isEmpty || // Cannot drop if body is already empty
+      //definition.name == nme.ANON_FUN_NAME || // Cannot drop because they constrain type args
+      definition.mods.isFinal && definition.rhs.isInstanceOf[Literal] || // Constant folding
+      containsSuperAccessor(definition.rhs) // Cannot drop super accessors, they affect public API
     }
 
     // To make sure that the previous term name works and can always be found
@@ -57,8 +59,10 @@ trait ZincOutlining {
 
     override def patDefOrDcl(pos: RunId, mods: Modifiers): List[Tree] = {
       super.patDefOrDcl(pos, mods).mapConserve {
-        case vd: ValDef if canDropBody(vd) => vd.copy(rhs = UndefinedTree)
-        case t                             => t
+        case vd: ValDef if canDropBody(vd) =>
+          reportStatistics(vd.rhs)
+          vd.copy(rhs = UndefinedTree)
+        case t => t
       }
     }
 
@@ -76,6 +80,7 @@ trait ZincOutlining {
     override def funDefOrDcl(start: RunId, mods: Modifiers): Tree = {
       super.funDefOrDcl(start, mods) match {
         case dd: DefDef if canDropBody(dd) =>
+          reportStatistics(dd.rhs)
           dd.copy(mods = stripTailRec(dd.mods), rhs = UndefinedTree)
         case t => t
       }
@@ -83,9 +88,11 @@ trait ZincOutlining {
 
     def pruneExpr(tree: Tree): List[Tree] = {
       tree match {
-        case Ident(_) | Apply(_, _) | Select(_, _) | TypeApply(_, _) | This(_) => Nil
-        case t @ (Block(_, _) | Try(_, _, _)) if !containsSuperAccessor(t)     => Nil
-        case t                                                                 => List(t)
+        case t @ (Ident(_) | Apply(_, _) | Select(_, _) | TypeApply(_, _) | This(_)) =>
+          reportStatistics(t); Nil
+        case t @ (Block(_, _) | Try(_, _, _)) if !containsSuperAccessor(t) =>
+          reportStatistics(t); Nil
+        case t => List(t)
       }
     }
 

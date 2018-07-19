@@ -81,7 +81,7 @@ class OutlineSpecification extends UnitSpec {
         |class SuperAccessorSelect
       """.stripMargin
 
-    val outlineArgs = List("-Youtline", "-Youtline-diff")
+    val outlineArgs = List("-Youtline", "-Youtline-diff", "-Ystatistics")
     object ParallelTestCallback extends TestCallback
     val compiler = new ScalaCompilerForUnitTesting
     val projectA = compiler.Project(List(sourceA, sourceB), ParallelTestCallback, outlineArgs)
