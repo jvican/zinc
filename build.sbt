@@ -269,10 +269,8 @@ lazy val zincIvyIntegration = (project in internalPath / "zinc-ivy-integration")
     name := "zinc Ivy Integration",
     compileOrder := sbt.CompileOrder.ScalaThenJava,
     mimaSettings,
-    test in Test := {
-      // Test in ivy integration needs the published compiler bridges to work
-      (test in Test).value
-    }
+    fork in Test := true,
+    test in javaHome := Some(file("/usr/lib/jvm/java-7-openjdk"))
   )
   .configure(addSbtLmCore, addSbtLmIvyTest)
 

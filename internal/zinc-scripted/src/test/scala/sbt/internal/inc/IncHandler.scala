@@ -71,7 +71,7 @@ class IncHandler(directory: File, cacheDir: File, scriptedLog: ManagedLogger)
   }
 
   // Use the scripted resolver to make sure that we don't mistakenly get other jars
-  override val resolvers: Array[Resolver] = Array(ScriptedResolver, Resolver.mavenCentral)
+  //override val resolvers: Array[Resolver] = Array(ScriptedResolver, Resolver.mavenCentral)
 
   val compiler = new IncrementalCompilerImpl
 

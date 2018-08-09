@@ -297,7 +297,7 @@
         {
           "name": "classpathOptions",
           "type": "xsbti.compile.ClasspathOptions",
-          "default": "xsbti.compile.ClasspathOptionsUtil.boot()",
+          "default": "ClasspathOptions.of(true, false, false, true, true)",
           "doc": "The configuration to create the classpath.",
           "since": "1.0.3"
         },

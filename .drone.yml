@@ -13,7 +13,7 @@ pipeline:
   restore_cache:
     image: appleboy/drone-sftp-cache
     when:
-      ref: [ refs/heads/1.x, refs/tags/*, refs/pull/*/head ]
+      ref: [ refs/heads/1.x-bloop, refs/tags/*, refs/pull/*/head ]
     secrets: [ sftp_cache_username, sftp_cache_private_key, sftp_cache_server, sftp_cache_path ]
     restore: true
     mount:
@@ -25,32 +25,41 @@ pipeline:
   tests:
     image: scalacenter/scala-docs:1.3
     when:
-      ref: [ refs/heads/1.x, refs/tags/*, refs/pull/*/head ]
+      ref: [ refs/heads/1.x-bloop, refs/tags/*, refs/pull/*/head ]
     commands:
       - export DRONE_DIR="/drone"
       - git fetch --tags && git log | head -n 20
       - ./bin/run-ci.sh
 
   publish:
-    image: scalacenter/scala:1.3
+    image: scalacenter/scala-docs:1.3
+    secrets: [ sonatype_user, sonatype_password, pgp_password, bintray_user, bintray_pass ]
     volumes:
       - /scalacenter:/keys
     when:
+      ref: [ refs/heads/1.x-bloop, refs/tags/* ]
       event: [ push, tag, deployment ]
       status: success
+      matrix:
+        # Only publish in one of the two different runs of the CI
+        CI_SCALA_VERSION: 2.12.6
     commands:
-      # To know what we're releasing
       - git log | head -n 20
+      - export DRONE_DIR="/drone"
       - /usr/local/bin/setup_keys.sh
       - /usr/local/bin/store_credentials.sh
-      - sbt releaseEarly
+      - ./bin/sbt-ci.sh \
+          "set resolvers in compilerInterface := (resolvers.in(compilerInterface).value.filter(_.name != \"alternative-local\"))" \
+          "set resolvers in compilerBridge := (resolvers.in(compilerBridge).value.filter(_.name != \"alternative-local\"))" \
+          "set pgpPublicRing in Global := file(\"/drone/.gnupg/pubring.asc\")" \
+          "set pgpSecretRing in Global := file(\"/drone/.gnupg/secring.asc\")" \
+          ";zincRoot/releaseEarly;+compilerBridge/releaseEarly"
 
   rebuild_cache:
     image: appleboy/drone-sftp-cache
     when:
-      ref: [ refs/heads/1.x, refs/tags/*, refs/pull/*/head ]
+      ref: [ refs/heads/1.x-bloop, refs/tags/*, refs/pull/*/head ]
     secrets: [ sftp_cache_username, sftp_cache_private_key, sftp_cache_server, sftp_cache_path ]
-
     rebuild: true
     mount:
       - /drone/.ivy2/cache
