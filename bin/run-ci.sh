@@ -3,15 +3,14 @@ set -eu
 set -o nounset
 SCALA_VERSION="$1"
 
-sbt -Dfile.encoding=UTF-8 \
+THIS_DIR=$(dirname "$0")
+SBT_SCRIPT="$THIS_DIR/sbt-ci.sh"
+"$SBT_SCRIPT" -Dfile.encoding=UTF-8 \
   -J-XX:ReservedCodeCacheSize=256M \
-  -J-Xmx3046M -J-Xms3046M -J-server \
-  +mimaReportBinaryIssues \
+  -J-Xmx4086M -J-Xms1024M -J-server \
   scalafmt::test \
   test:scalafmt::test \
-  whitesourceCheckPolicies \
-  ++2.10.11 \
-  compilerInterface/compile \
+  compilerInterfaceJava6Compat/compile \
   zincRoot/test:compile \
   bloopScripted/compile \
   crossTestBridges \
