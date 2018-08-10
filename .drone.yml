@@ -1,49 +1,67 @@
+matrix:
+  CI_SCALA_VERSION:
+    - 2.12.6
+
+clone:
+  git:
+    image: plugins/git
+    tags: true
+    recursive: true
+    depth: 50
+
 pipeline:
-  # Fetch folders from distributed cache
-  sftp_cache_restore:
-    image: plugins/sftp-cache
+  restore_cache:
+    image: appleboy/drone-sftp-cache
+    when:
+      ref: [ refs/heads/master, refs/tags/*, refs/pull/*/head ]
+    secrets: [ sftp_cache_username, sftp_cache_private_key, sftp_cache_server, sftp_cache_path ]
     restore: true
     mount:
-      - /drone/.ivy2
-      - /drone/.coursier-cache
+      - /drone/.ivy2/cache
+      - /drone/.coursier
       - /drone/.sbt
       - /drone/.git
-    when:
-      event: [push, pull_request, tag, deployment]
 
-  tests:
-    image: scalacenter/scala:1.3
+  build:
+    image: scalacenter/scala-docs:1.3
+    group: build
+    when:
+      ref: [ refs/heads/master, refs/tags/*, refs/pull/*/head ]
     commands:
-      - git fetch --tags && git log | head -n 20
+      - export DRONE_DIR="/drone"
+      - git log | head -n 20
       - ./bin/run-ci.sh ${CI_SCALA_VERSION}
 
   publish:
-    image: scalacenter/scala:1.3
+    image: scalacenter/scala-docs:1.3
+    secrets: [ sonatype_user, sonatype_password, pgp_password, bintray_user, bintray_pass ]
     volumes:
       - /scalacenter:/keys
     when:
+      ref: [ refs/heads/master, refs/tags/* ]
       event: [ push, tag, deployment ]
       status: success
+      matrix:
+        # Only publish in one of the two different runs of the CI
+        CI_SCALA_VERSION: 2.12.6
     commands:
-      # To know what we're releasing
       - git log | head -n 20
+      - export DRONE_DIR="/drone"
       - /usr/local/bin/setup_keys.sh
       - /usr/local/bin/store_credentials.sh
-      - sbt releaseEarly
+      - bin/run-publish.sh \
+          "set pgpPublicRing in Global := file(\"/drone/.gnupg/pubring.asc\")" \
+          "set pgpSecretRing in Global := file(\"/drone/.gnupg/secring.asc\")" \
+          ";releaseEarly;+compilerBridge/releaseEarly"
 
-  # Save folders in distributed cache
-  sftp_cache_rebuild:
-    image: plugins/sftp-cache
+  rebuild_cache:
+    image: appleboy/drone-sftp-cache
+    when:
+      ref: [ refs/heads/master, refs/tags/*, refs/pull/*/head ]
+    secrets: [ sftp_cache_username, sftp_cache_private_key, sftp_cache_server, sftp_cache_path ]
     rebuild: true
     mount:
-      - /drone/.ivy2
-      - /drone/.coursier-cache
+      - /drone/.ivy2/cache
+      - /drone/.coursier
       - /drone/.sbt
       - /drone/.git
-    when:
-      event: [push, pull_request, tag, deployment]
-
-matrix:
-  CI_SCALA_VERSION:
-    - 2.11.11
-    - 2.12.3

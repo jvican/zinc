@@ -53,7 +53,7 @@ public final class CompileOptions implements java.io.Serializable {
         classesDirectory = new java.io.File("classes");
         scalacOptions = new String[0];
         javacOptions = new String[0];
-        classpathOptions = xsbti.compile.ClasspathOptionsUtil.boot();
+        classpathOptions = ClasspathOptions.of(true, false, false, true, true);
         maxErrors = 100;
         sourcePositionMapper = new java.util.function.Function<xsbti.Position, xsbti.Position>() { public xsbti.Position apply(xsbti.Position a) { return a; } };
         order = xsbti.compile.CompileOrder.Mixed;
@@ -65,7 +65,7 @@ public final class CompileOptions implements java.io.Serializable {
         classesDirectory = _classesDirectory;
         scalacOptions = _scalacOptions;
         javacOptions = _javacOptions;
-        classpathOptions = xsbti.compile.ClasspathOptionsUtil.boot();
+        classpathOptions = ClasspathOptions.of(true, false, false, true, true);
         maxErrors = _maxErrors;
         sourcePositionMapper = _sourcePositionMapper;
         order = _order;

@@ -1,5 +1,6 @@
 package bloop.sbt.integrations
 
+import bintray.BintrayKeys
 import ch.epfl.scala.sbt.release.{ReleaseEarlyPlugin, AutoImported => ReleaseEarlyNamespace}
 import com.typesafe.sbt.SbtPgp
 import com.typesafe.sbt.SbtPgp.autoImport.PgpKeys
@@ -23,7 +24,11 @@ object BloopPluginImplementation {
   val globalSettings: Seq[Def.Setting[_]] = List()
   val buildSettings: Seq[Def.Setting[_]] = List(
     Keys.organization := "ch.epfl.scala",
-    ReleaseEarlyNamespace.releaseEarlyWith := ReleaseEarlyNamespace.SonatypePublisher,
+    BintrayKeys.bintrayOrganization := Some("scalacenter"),
+    Keys.startYear := Some(2017),
+    Keys.autoAPIMappings := true,
+    Keys.publishMavenStyle := true,
+    ReleaseEarlyNamespace.releaseEarlyWith := ReleaseEarlyNamespace.BintrayPublisher,
     PgpKeys.pgpPublicRing := {
       if (Keys.insideCI.value) file("/drone/.gnupg/pubring.asc")
       else PgpKeys.pgpPublicRing.value
@@ -36,6 +41,10 @@ object BloopPluginImplementation {
 
   import DynVerPlugin.{autoImport => DynVerKeys}
   val projectSettings: Seq[Def.Setting[_]] = List(
+    BintrayKeys.bintrayRepository := "releases",
+    BintrayKeys.bintrayPackage := "zinc",
+    // Add some metadata that is useful to see in every on-merge bintray release
+    BintrayKeys.bintrayPackageLabels := List("incremental", "compilation", "scala", "java"),
     ReleaseEarlyNamespace.releaseEarlyPublish := PgpKeys.publishSigned.value,
     Keys.publishArtifact in (Compile, Keys.packageDoc) := {
       val output = DynVerKeys.dynverGitDescribeOutput.value
