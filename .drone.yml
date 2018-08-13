@@ -50,9 +50,11 @@ pipeline:
       - /usr/local/bin/setup_keys.sh
       - /usr/local/bin/store_credentials.sh
       - ./bin/sbt-ci.sh \
+          "set resolvers in compilerInterface := (resolvers.in(compilerInterface).value.filter(_.name != \"alternative-local\"))" \
+          "set resolvers in compilerBridge := (resolvers.in(compilerBridge).value.filter(_.name != \"alternative-local\"))" \
           "set pgpPublicRing in Global := file(\"/drone/.gnupg/pubring.asc\")" \
           "set pgpSecretRing in Global := file(\"/drone/.gnupg/secring.asc\")" \
-          ";releaseEarly;+compilerBridge/releaseEarly"
+          ";zincRoot/releaseEarly;+compilerBridge/releaseEarly"
 
   rebuild_cache:
     image: appleboy/drone-sftp-cache
