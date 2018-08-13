@@ -3,12 +3,15 @@ package xsbt
 import xsbti.TestCallback.ExtractedClassDependencies
 import xsbti.compile.SingleOutput
 import java.io.File
+import java.net.URI
+
 import xsbti._
 import sbt.io.IO.withTemporaryDirectory
 import xsbti.api.ClassLike
-
 import sbt.internal.util.ConsoleLogger
 import xsbti.api.DependencyContext._
+
+import scala.collection.mutable
 
 /**
  * Provides common functionality needed for unit tests that require compiling
@@ -100,17 +103,7 @@ class ScalaCompilerForUnitTesting {
    */
   def extractDependenciesFromSrcs(srcs: List[List[String]]): ExtractedClassDependencies = {
     val (_, testCallback) = compileSrcs(srcs, reuseCompilerInstance = true)
-
-    val memberRefDeps = testCallback.classDependencies collect {
-      case (target, src, DependencyByMemberRef) => (src, target)
-    }
-    val inheritanceDeps = testCallback.classDependencies collect {
-      case (target, src, DependencyByInheritance) => (src, target)
-    }
-    val localInheritanceDeps = testCallback.classDependencies collect {
-      case (target, src, LocalDependencyByInheritance) => (src, target)
-    }
-    ExtractedClassDependencies.fromPairs(memberRefDeps, inheritanceDeps, localInheritanceDeps)
+    TestCallback.fromCallback(testCallback)
   }
 
   def extractDependenciesFromSrcs(srcs: String*): ExtractedClassDependencies = {
@@ -135,10 +128,10 @@ class ScalaCompilerForUnitTesting {
    */
   private[xsbt] def compileSrcs(
       groupedSrcs: List[List[String]],
-      reuseCompilerInstance: Boolean
+      reuseCompilerInstance: Boolean,
+      analysisCallback: TestCallback = new TestCallback
   ): (Seq[File], TestCallback) = {
     withTemporaryDirectory { temp =>
-      val analysisCallback = new TestCallback
       val classesDir = new File(temp, "classes")
       classesDir.mkdir()
 
@@ -170,6 +163,42 @@ class ScalaCompilerForUnitTesting {
     }
   }
 
+  case class Project(srcs: List[String], callback: TestCallback, compilerArgs: List[String] = Nil)
+  case class CompilationResult(classesDir: File, testCallback: TestCallback, compiler: ZincCompiler)
+  private[xsbt] def compileProject(
+      project: Project,
+      classpath: List[File],
+      picklePath: List[URI],
+      maybeCompiler: Option[ZincCompiler] = None
+  ): CompilationResult = {
+    val callback = project.callback
+    def compile(temp: File): CompilationResult = {
+      val classesDir = new File(temp, "classes")
+      classesDir.deleteOnExit()
+      classesDir.mkdir()
+      val fullClasspath = (classpath).map(_.getAbsolutePath).mkString(":")
+      val compiler = maybeCompiler
+        .map(p => { p.set(callback, p.reporter.asInstanceOf[DelegatingReporter]); p })
+        .getOrElse(prepareCompiler(classesDir, callback, fullClasspath, project.compilerArgs))
+      if (!picklePath.isEmpty)
+        compiler.extendClassPathWithPicklePath(picklePath)
+      val run = new compiler.Run
+      val srcFiles = project.srcs.zipWithIndex map {
+        case (src, i) =>
+          val fileName = s"Test-$i.scala"
+          prepareSrcFile(temp, fileName, src)
+      }
+
+      val srcFilePaths = srcFiles.map(srcFile => srcFile.getAbsolutePath).toList
+      run.compile(srcFilePaths)
+
+      srcFilePaths.foreach(f => new File(f).delete)
+      CompilationResult(classesDir, callback, compiler)
+    }
+
+    withTemporaryDirectory(compile(_), true)
+  }
+
   private def compileSrcs(srcs: String*): (Seq[File], TestCallback) = {
     compileSrcs(List(srcs.toList), reuseCompilerInstance = true)
   }
@@ -180,10 +209,13 @@ class ScalaCompilerForUnitTesting {
     srcFile
   }
 
-  private[xsbt] def prepareCompiler(outputDir: File,
-                                    analysisCallback: AnalysisCallback,
-                                    classpath: String = "."): ZincCompiler = {
-    val args = Array.empty[String]
+  private[xsbt] def prepareCompiler(
+      outputDir: File,
+      analysisCallback: AnalysisCallback,
+      classpath: String = ".",
+      compilerArgs: List[String] = Nil
+  ): ZincCompiler = {
+    val args = compilerArgs.toArray
     object output extends SingleOutput {
       def getOutputDirectory: File = outputDir
       override def toString = s"SingleOutput($getOutputDirectory)"

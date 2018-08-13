@@ -1,7 +1,9 @@
 package xsbti
 
 import java.io.File
+import java.net.URI
 import java.util
+import java.util.Optional
 
 import xsbti.api.{ ClassLike, DependencyContext }
 
@@ -75,8 +77,8 @@ class TestCallback extends AnalysisCallback {
               reported: Boolean): Unit = ()
 
   override def dependencyPhaseCompleted(): Unit = {}
-
   override def apiPhaseCompleted(): Unit = {}
+  override def picklerPhaseCompleted(handle: URI): Unit = {}
 }
 
 object TestCallback {
@@ -104,5 +106,19 @@ object TestCallback {
       // convert all collections to immutable variants
       multiMap.toMap.mapValues(_.toSet).withDefaultValue(Set.empty)
     }
+  }
+
+  def fromCallback(testCallback: TestCallback): ExtractedClassDependencies = {
+    import xsbti.api.DependencyContext._
+    val memberRefDeps = testCallback.classDependencies collect {
+      case (target, src, DependencyByMemberRef) => (src, target)
+    }
+    val inheritanceDeps = testCallback.classDependencies collect {
+      case (target, src, DependencyByInheritance) => (src, target)
+    }
+    val localInheritanceDeps = testCallback.classDependencies collect {
+      case (target, src, LocalDependencyByInheritance) => (src, target)
+    }
+    ExtractedClassDependencies.fromPairs(memberRefDeps, inheritanceDeps, localInheritanceDeps)
   }
 }

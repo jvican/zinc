@@ -1,3 +1,5 @@
 target/
 zinc/src/test/resources/bin
 .ivy2/
+.idea/
+.bloop/
