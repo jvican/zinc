@@ -3,7 +3,7 @@ package xsbt
 trait ZincStatistics {
   self: ZincCompiler =>
 
-  private val totalNodesCounter =
+/*  private val totalNodesCounter =
     new statistics.Counter("#total nodes with no outlining", List("typer"))
   private val removedOutlinedCounter =
     new statistics.SubCounter("#nodes removed by outlining", totalNodesCounter)
@@ -27,5 +27,8 @@ trait ZincStatistics {
       val totalCount = countNodes(normalNodes)
       statistics.incCounter(removedOutlinedCounter, totalCount)
     }
-  }
+  }*/
+
+  def reportTotal(originalTree: => Tree): Unit = ()
+  def reportStatistics(normalNodes: Tree): Unit = ()
 }
