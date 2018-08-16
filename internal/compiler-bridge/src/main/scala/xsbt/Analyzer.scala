@@ -39,11 +39,16 @@ final class Analyzer(val global: CallbackGlobal) extends LocateClassFile {
               if (!isLocalClass) {
                 val srcClassName = classNameAsString(sym)
                 val binaryClassName = flatclassName(sym, '.', separatorRequired)
+                //println(s"Analyzer: class binary name ${binaryClassName}, class file ${classFile} src name ${srcClassName}")
                 callback.generatedNonLocalClass(sourceFile,
                                                 classFile,
                                                 binaryClassName,
                                                 srcClassName)
               } else {
+                val srcClassName = classNameAsString(sym)
+                val binaryClassName = flatclassName(sym, '.', separatorRequired)
+                //println(s"Analyzer: class binary name ${binaryClassName}, class file ${classFile} src name ${srcClassName}")
+                //println(s"Analyzer: Local class file ${classFile}")
                 callback.generatedLocalClass(sourceFile, classFile)
               }
             }

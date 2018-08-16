@@ -15,7 +15,7 @@ object API {
   val name = "xsbt-api"
 }
 
-final class API(val global: CallbackGlobal) extends Compat with GlobalHelpers {
+final class API(val global: CallbackGlobal) extends Compat with GlobalHelpers with ClassName {
   import global._
 
   def newPhase(prev: Phase) = new ApiPhase(prev)
@@ -58,6 +58,67 @@ final class API(val global: CallbackGlobal) extends Compat with GlobalHelpers {
       val mainClassesIt = mainClasses.iterator
       while (mainClassesIt.hasNext) {
         callback.mainClass(sourceFile, mainClassesIt.next())
+      }
+
+      // Associate class files, source files and symbols together
+      registerGeneratedClasses(unit, extractApi)
+    }
+  }
+
+  case class FlattenedNames(binaryName: Name, className: Name) {
+    override def toString: String =
+      s"binary name: ${binaryName.decode}, class name: ${className.decode}"
+  }
+
+  def flattenedNames(symbol: Symbol): FlattenedNames = {
+    def toName(symbol: Symbol, x: String): Name = symbol.name.newName(x)
+    val enclosingTopLevelClass = symbol.enclosingTopLevelClass
+    if (enclosingTopLevelClass == symbol) {
+      FlattenedNames(
+        enclosingTopLevelClass.javaBinaryName,
+        toName(symbol, enclosingTopLevelClass.javaClassName)
+      )
+    } else {
+      def nextName(name: Name, symbol: Symbol): Name =
+        if (symbol.isModuleClass) name else name.append(nme.MODULE_SUFFIX_STRING)
+
+      val danglingSymbols =
+        if (enclosingTopLevelClass == symbol.moduleClass) Nil
+        else symbol.ownersIterator.takeWhile(s => s != enclosingTopLevelClass).toList
+
+      val lastNameSection = danglingSymbols.reverse.foldLeft(toName(enclosingTopLevelClass, "")) {
+        case (prevName: Name, nextSymbol) =>
+          if (nextSymbol != symbol) prevName.append(nextName(nextSymbol.javaSimpleName, nextSymbol))
+          else prevName.append(nextSymbol.javaSimpleName)
+      }
+
+      val rootBinaryName = nextName(enclosingTopLevelClass.javaBinaryName, enclosingTopLevelClass)
+      val rootClassName = {
+        val className = toName(enclosingTopLevelClass, enclosingTopLevelClass.javaClassName)
+        nextName(className, enclosingTopLevelClass)
+      }
+
+      FlattenedNames(
+        rootBinaryName.append(lastNameSection),
+        rootClassName.append(lastNameSection)
+      )
+    }
+  }
+
+  def registerGeneratedClasses(unit: CompilationUnit, api: ExtractAPI[global.type]): Unit = {
+    val sourceFile = unit.source.file
+    val sourceJavaFile = sourceFile.file
+    api.allExtractedNonLocalSymbols.foreach { symbol =>
+      val names = flattenedNames(symbol)
+      val completeClassName = s"${names.binaryName.decode}.class"
+      val outputDir = global.settings.outputDirs.outputDirFor(sourceFile).file
+      val classFile = new java.io.File(outputDir, completeClassName)
+      if (symbol.isLocalClass) {
+        callback.generatedLocalClass(sourceJavaFile, classFile)
+      } else {
+        val zincBinaryName = names.className.decode
+        val srcClassName = classNameAsString(symbol)
+        callback.generatedNonLocalClass(sourceJavaFile, classFile, zincBinaryName, srcClassName)
       }
     }
   }
