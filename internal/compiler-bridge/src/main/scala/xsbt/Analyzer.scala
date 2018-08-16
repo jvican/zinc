@@ -12,6 +12,7 @@ import scala.tools.nsc.Phase
 object Analyzer {
   def name = "xsbt-analyzer"
 }
+
 final class Analyzer(val global: CallbackGlobal) extends LocateClassFile {
   import global._
 
@@ -44,6 +45,11 @@ final class Analyzer(val global: CallbackGlobal) extends LocateClassFile {
                                                 binaryClassName,
                                                 srcClassName)
               } else {
+                val srcClassName = classNameAsString(sym)
+                val binaryClassName = flatclassName(sym, '.', separatorRequired)
+/*                println(s"source ${srcClassName}")
+                println(s"flat name ${binaryClassName}")
+                println(s"binary name ${sym.javaBinaryName.decode}")*/
                 callback.generatedLocalClass(sourceFile, classFile)
               }
             }

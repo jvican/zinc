@@ -117,7 +117,7 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
   }
 
   override lazy val phaseDescriptors = {
-    phasesSet += sbtAnalyzer
+    //phasesSet += sbtAnalyzer
     if (callback.enabled()) {
       phasesSet += sbtDependency
       phasesSet += apiExtractor
