@@ -1,0 +1,3 @@
+> compile
+$ copy-file changes/D.scala D.scala
+-> compile
