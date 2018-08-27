@@ -28,7 +28,7 @@ object BloopPluginImplementation {
     Keys.startYear := Some(2017),
     Keys.autoAPIMappings := true,
     Keys.publishMavenStyle := true,
-    ReleaseEarlyNamespace.releaseEarlyWith := ReleaseEarlyNamespace.BintrayPublisher,
+    ReleaseEarlyNamespace.releaseEarlyWith := ReleaseEarlyNamespace.SonatypePublisher,
     PgpKeys.pgpPublicRing := {
       if (Keys.insideCI.value) file("/drone/.gnupg/pubring.asc")
       else PgpKeys.pgpPublicRing.value
@@ -46,6 +46,11 @@ object BloopPluginImplementation {
     // Add some metadata that is useful to see in every on-merge bintray release
     BintrayKeys.bintrayPackageLabels := List("incremental", "compilation", "scala", "java"),
     ReleaseEarlyNamespace.releaseEarlyPublish := PgpKeys.publishSigned.value,
+    Keys.isSnapshot := {
+      val output = DynVerKeys.dynverGitDescribeOutput.value
+      val version = Keys.version.value
+      !BloopDefaults.publishDocAndSourceArtifact(output, version)
+    },
     Keys.publishArtifact in (Compile, Keys.packageDoc) := {
       val output = DynVerKeys.dynverGitDescribeOutput.value
       val version = Keys.version.value
