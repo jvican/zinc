@@ -51,7 +51,7 @@ object TextAnalysisFormat extends TextAnalysisFormat(ReadWriteMappers.getEmptyMa
   private implicit def problemFormat: Format[Problem] =
     asProduct5(problem)(p => (p.category, p.position, p.message, p.severity, jo2o(p.rendered)))
   private implicit def positionFormat: Format[Position] = {
-    asProduct7(position)(
+    asProduct13(position)(
       p =>
         (
           jo2o(p.line),
@@ -60,7 +60,13 @@ object TextAnalysisFormat extends TextAnalysisFormat(ReadWriteMappers.getEmptyMa
           jo2o(p.pointer),
           jo2o(p.pointerSpace),
           jo2o(p.sourcePath),
-          jo2o(p.sourceFile)
+          jo2o(p.sourceFile),
+          jo2o(p.startOffset),
+          jo2o(p.endOffset),
+          jo2o(p.startLine),
+          jo2o(p.startColumn),
+          jo2o(p.endLine),
+          jo2o(p.endColumn)
         )
     )
   }
