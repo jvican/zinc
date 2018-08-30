@@ -19,7 +19,7 @@ import xsbt.api.SameAPI
  *
  * See MemberReferenceInvalidationStrategy for some more information.
  */
-private final class IncrementalNameHashingCommon(log: sbt.util.Logger, options: IncOptions)
+class IncrementalNameHashingCommon(log: sbt.util.Logger, options: IncOptions)
     extends IncrementalCommon(log, options) {
 
   private val memberRefInvalidator = new MemberRefInvalidator(log, options.logRecompileOnMacro())
