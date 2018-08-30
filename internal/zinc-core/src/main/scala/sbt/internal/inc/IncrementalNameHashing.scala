@@ -19,7 +19,7 @@ import xsbt.api.SameAPI
  *
  * See MemberReferenceInvalidationStrategy for some more information.
  */
-private final class IncrementalNameHashing(log: sbt.util.Logger, options: IncOptions)
+private final class IncrementalNameHashingCommon(log: sbt.util.Logger, options: IncOptions)
     extends IncrementalCommon(log, options) {
 
   private val memberRefInvalidator = new MemberRefInvalidator(log, options.logRecompileOnMacro())
@@ -160,3 +160,6 @@ private final class IncrementalNameHashing(log: sbt.util.Logger, options: IncOpt
   override protected def allDeps(relations: Relations): (String) => Set[String] =
     cls => relations.memberRef.internal.reverse(cls)
 }
+
+private final class IncrementalNameHashing(log: sbt.util.Logger, options: IncOptions)
+    extends IncrementalNameHashingCommon(log, options)
