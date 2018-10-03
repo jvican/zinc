@@ -61,10 +61,13 @@ pipeline:
       - export DRONE_DIR="/drone"
       - /usr/local/bin/setup_keys.sh
       - /usr/local/bin/store_credentials.sh
+      - git status
       - ./bin/sbt-ci.sh \
+          "show version" \
           "set pgpPublicRing in Global := file(\"/drone/.gnupg/pubring.asc\")" \
           "set pgpSecretRing in Global := file(\"/drone/.gnupg/secring.asc\")" \
-          "zincRoot/releaseEarly"
+          "zincRoot/releaseEarly" \
+          "sonatypeReleaseAll"
 
   rebuild_cache:
     image: appleboy/drone-sftp-cache
