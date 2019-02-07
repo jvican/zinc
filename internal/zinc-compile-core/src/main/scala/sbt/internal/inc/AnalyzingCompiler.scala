@@ -63,7 +63,8 @@ final class AnalyzingCompiler(
       maximumErrors: Int,
       cache: GlobalsCache,
       log: ManagedLogger,
-      store: IRStore
+      store: IRStore,
+      manager: ClassFileManager
   ): Unit = {
     val compArgs = new CompilerArguments(scalaInstance, classpathOptions)
     val arguments = compArgs(Nil, classpath, None, options)
@@ -82,7 +83,8 @@ final class AnalyzingCompiler(
       cache,
       log,
       progress,
-      store
+      store,
+      Some(manager)
     )
   }
 
@@ -108,7 +110,8 @@ final class AnalyzingCompiler(
       cache,
       log,
       progressOpt,
-      EmptyIRStore.getStore()
+      EmptyIRStore.getStore(),
+      None
     )
   }
 
@@ -122,7 +125,8 @@ final class AnalyzingCompiler(
       cache: GlobalsCache,
       log: xLogger,
       progressOpt: Optional[CompileProgress],
-      store: IRStore
+      store: IRStore,
+      classFileManager: Option[ClassFileManager]
   ): Unit = {
     val cached = cache(options, output, !changes.isEmpty, this, log, reporter)
     val progress = if (progressOpt.isPresent) progressOpt.get else IgnoreProgress
@@ -153,7 +157,8 @@ final class AnalyzingCompiler(
       reporter: Reporter,
       progress: CompileProgress,
       store: IRStore,
-      compiler: CachedCompiler
+      compiler: CachedCompiler,
+      classFileManager: Option[ClassFileManager]
   ): Unit = {
     setStoreToUnderlyingCompiler(store, compiler, log)
     onArgsHandler(compiler.commandArguments(sources))
@@ -186,6 +191,29 @@ final class AnalyzingCompiler(
         Log.debug(
           logger,
           "Missing `resetGlobalIRCaches` entrypoint in compiler interface means the compiler doesn't support pipelining yet."
+        )
+        ()
+    }
+    ()
+  }
+
+  private def setClassFileManagerToUnderlyingCompiler(
+      manager: ClassFileManager,
+      cached: CachedCompiler,
+      logger: xLogger
+  ): Unit = {
+    try {
+      call("xsbt.CompilerInterface", "setClassFileManager", logger)(
+        classOf[ClassFileManager],
+        classOf[CachedCompiler],
+        classOf[xLogger]
+      )(manager, cached, logger)
+    } catch {
+      // The compiler doesn't implement it yet (e.g. Dotty's bridge hasn't been updated)
+      case _: NoSuchMethodException =>
+        Log.debug(
+          logger,
+          "Missing `setClassFileManager` entrypoint in compiler interface means the compiler doesn't support pipelining yet."
         )
         ()
     }
@@ -307,8 +335,10 @@ final class AnalyzingCompiler(
     ()
   }
 
-  private[this] def consoleClasspaths(classpath: Seq[File],
-                                      classpathOptions: ClasspathOptions): (String, String) = {
+  private[this] def consoleClasspaths(
+      classpath: Seq[File],
+      classpathOptions: ClasspathOptions
+  ): (String, String) = {
     val arguments = new CompilerArguments(scalaInstance, classpathOptions)
     val classpathString = CompilerArguments.absString(arguments.finishClasspath(classpath))
     val bootClasspath =

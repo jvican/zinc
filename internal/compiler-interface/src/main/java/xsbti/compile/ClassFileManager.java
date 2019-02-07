@@ -27,7 +27,6 @@ public interface ClassFileManager {
      */
     void delete(File[] classes);
 
-    /** Called once per compilation step with the class files generated during that step. */
     /**
      * Handler of classes that decides where certain class files should be
      * stored after every compilation step.
@@ -39,8 +38,6 @@ public interface ClassFileManager {
      */
     void generated(File[] classes);
 
-    /** Called once at the end of the whole compilation run, with `success`
-     * indicating whether compilation succeeded (true) or not (false). */
     /**
      * Informs the class file manager whether the compilation run has succeeded.
      *
@@ -50,4 +47,13 @@ public interface ClassFileManager {
      * @param success Whether the compilation run has succeeded or not.
      */
     void complete(boolean success);
+
+    /**
+     * Confirms whether a class file has been invalidated or not. This method is
+     * used to know whether the compiler should load a symbol from the binary class
+     * file or should instead prefer the source.
+     *
+     * @param classFile The class file we want to know whether was invalidated by Zinc.
+     */
+    boolean isInvalidated(File classFile);
 }

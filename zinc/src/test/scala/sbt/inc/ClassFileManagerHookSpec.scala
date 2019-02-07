@@ -14,7 +14,9 @@ class ClassFileManagerHookSpec extends BaseCompilerSpec {
 
       var callbackCalled = 0
       val myClassFileManager = new ClassFileManager {
+        val invalidated = new scala.collection.mutable.HashSet[File]()
         override def delete(classes: Array[File]): Unit = {
+          classes.foreach(classFile => invalidated.+=(classFile))
           callbackCalled += 1
         }
         override def generated(classes: Array[File]): Unit = {
@@ -23,6 +25,8 @@ class ClassFileManagerHookSpec extends BaseCompilerSpec {
         override def complete(success: Boolean): Unit = {
           callbackCalled += 1
         }
+        override def isInvalidated(classFile: File): Boolean =
+          invalidated.contains(classFile)
       }
 
       val incOptions = IncOptions.of()

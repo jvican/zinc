@@ -60,4 +60,14 @@ public class WrappedClassFileManager implements ClassFileManager {
     }
     internal.generated(classes);
   }
+
+  @Override
+  public boolean isInvalidated(File classFile) {
+    // Avoid Java 8 syntax to accommodate Scala 2.10
+    if (external.isPresent()) {
+      return external.get().isInvalidated(classFile);
+    } else {
+      return internal.isInvalidated(classFile);
+    }
+  }
 }

@@ -22,9 +22,19 @@ sealed abstract class CallbackGlobal(
 ) extends Global(settings, reporter)
     with ZincPicklePath {
 
+  private[this] var classFileManager: ClassFileManager = _
+
+  def setClassFileManager(manager: ClassFileManager): Unit = {
+    classFileManager = manager
+  }
+  def resetClassFileManager(): Unit = {
+    classFileManager = null
+  }
+
   override lazy val loaders = new {
     val global: CallbackGlobal.this.type = CallbackGlobal.this
     val platform: CallbackGlobal.this.platform.type = CallbackGlobal.this.platform
+    val manager: ClassFileManager = CallbackGlobal.this.classFileManager
   } with ZincSymbolLoaders
 
   def foundMacroLocation: Option[String]

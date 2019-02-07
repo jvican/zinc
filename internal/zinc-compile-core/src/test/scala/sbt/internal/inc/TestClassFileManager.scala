@@ -14,7 +14,10 @@ class CollectingClassFileManager extends ClassFileManager {
   /** Collect generated classes, with public access to allow inspection. */
   val generatedClasses = new mutable.HashSet[File]
 
-  override def delete(classes: Array[File]): Unit = ()
+  private val invalidated = new mutable.HashSet[File]
+  override def delete(classes: Array[File]): Unit = {
+    classes.foreach(classFile => invalidated.+=(classFile))
+  }
 
   override def generated(classes: Array[File]): Unit = {
     generatedClasses ++= classes
@@ -22,4 +25,7 @@ class CollectingClassFileManager extends ClassFileManager {
   }
 
   override def complete(success: Boolean): Unit = ()
+  override def isInvalidated(classFile: File): Boolean = {
+    invalidated.contains(classFile)
+  }
 }

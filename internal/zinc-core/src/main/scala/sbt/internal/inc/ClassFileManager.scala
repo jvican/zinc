@@ -24,7 +24,8 @@ import xsbti.compile.{
 
 object ClassFileManager {
   def getDefaultClassFileManager(
-      classFileManagerType: Optional[ClassFileManagerType]): XClassFileManager = {
+      classFileManagerType: Optional[ClassFileManagerType]
+  ): XClassFileManager = {
     if (classFileManagerType.isPresent) {
       classFileManagerType.get match {
         case _: DeleteImmediatelyManagerType => new DeleteClassFileManager
@@ -43,10 +44,16 @@ object ClassFileManager {
   }
 
   private final class DeleteClassFileManager extends XClassFileManager {
-    override def delete(classes: Array[File]): Unit =
+    private val invalidated = new mutable.HashSet[File]
+    override def delete(classes: Array[File]): Unit = {
+      classes.foreach(classFile => invalidated.+=(classFile))
       IO.deleteFilesEmptyDirs(classes)
+    }
     override def generated(classes: Array[File]): Unit = ()
     override def complete(success: Boolean): Unit = ()
+    override def isInvalidated(classFile: File): Boolean = {
+      invalidated.contains(classFile)
+    }
   }
 
   /**
@@ -106,6 +113,10 @@ object ClassFileManager {
       }
       logger.debug(s"Removing the temporary directory used for backing up class files: $tempDir")
       IO.delete(tempDir)
+    }
+
+    override def isInvalidated(classFile: File): Boolean = {
+      movedClasses.keySet.contains(classFile)
     }
 
     def move(c: File): File = {
