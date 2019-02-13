@@ -80,6 +80,7 @@ class TestCallback extends AnalysisCallback {
   override def dependencyPhaseCompleted(): Unit = {}
   override def apiPhaseCompleted(): Unit = {}
   override def irCompleted(irs: Array[IR]): Unit = {}
+  override def classesInOutputJar(): util.Set[String] = java.util.Collections.emptySet()
 }
 
 object TestCallback {

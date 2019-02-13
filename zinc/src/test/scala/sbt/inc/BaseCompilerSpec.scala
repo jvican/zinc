@@ -181,7 +181,8 @@ class BaseCompilerSpec extends BridgeProviderSpecification {
       CompileOrder.Mixed,
       cs,
       setup,
-      prev
+      prev,
+      Optional.empty()
     )
 
     def doCompile(newInputs: Inputs => Inputs = identity): CompileResult = {
