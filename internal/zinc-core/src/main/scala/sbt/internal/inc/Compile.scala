@@ -143,7 +143,6 @@ private final class AnalysisCallback(
     options: IncOptions,
     outputJarContent: JarUtils.OutputJarContent
 ) extends xsbti.AnalysisCallback {
-
   private[this] val compilation: Compilation = Compilation(output)
 
   override def toString =
@@ -453,6 +452,7 @@ private final class AnalysisCallback(
   override def definedMacro(symbolName: String): Unit = ()
   override def invokedMacro(invokedMacroSymbol: String): Unit = ()
   override def definedPickles(pickles: Array[xsbti.T2[String, Array[Byte]]]): Unit = ()
+  override def invalidatedClassFiles(): Array[File] = new Array[File](0)
 
   override def classesInOutputJar(): java.util.Set[String] = {
     outputJarContent.get().asJava

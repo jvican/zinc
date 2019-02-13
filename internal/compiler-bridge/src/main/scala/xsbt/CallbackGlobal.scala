@@ -31,7 +31,14 @@ sealed abstract class CallbackGlobal(
   override lazy val loaders = new {
     val global: CallbackGlobal.this.type = CallbackGlobal.this
     val platform: CallbackGlobal.this.platform.type = CallbackGlobal.this.platform
-  } with GlobalSymbolLoaders
+  } with ZincSymbolLoaders
+
+  def setInvalidatedClassFiles(invalidatedClassFiles: Array[File]): Unit = {
+    loaders.invalidatedClassFilePaths.clear()
+    invalidatedClassFiles.foreach { invalidatedClassFile =>
+      loaders.invalidatedClassFilePaths.+=(invalidatedClassFile.getCanonicalPath)
+    }
+  }
 
   def callback: AnalysisCallback
   def findAssociatedFile(name: String): Option[(AbstractFile, Boolean)]
@@ -263,6 +270,7 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
 
   final def set(callback: AnalysisCallback, dreporter: DelegatingReporter): Unit = {
     this.callback0 = callback
+    this.setInvalidatedClassFiles(callback.invalidatedClassFiles)
 
     /* Add an analyzer's macro plugin purely for instrumentation purposes. */
     instrumentMacroInfrastructure(callback)

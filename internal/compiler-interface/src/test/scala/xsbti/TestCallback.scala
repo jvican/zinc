@@ -106,6 +106,8 @@ class TestCallback extends AnalysisCallback {
     }
   }
 
+  override def invalidatedClassFiles(): Array[File] = new Array[File](0)
+
   override def classesInOutputJar(): util.Set[String] = java.util.Collections.emptySet()
 }
 

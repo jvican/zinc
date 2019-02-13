@@ -75,8 +75,19 @@ object ClassFileManager {
   }
 
   private final class DeleteClassFileManager extends XClassFileManager {
-    override def delete(classes: Array[File]): Unit =
+    private val deletedClasses = new mutable.HashSet[File]
+    private val invalidatedClassFilesInLastRun = new mutable.HashSet[File]
+    override def delete(classes: Array[File]): Unit = {
+      invalidatedClassFilesInLastRun.clear()
+      classes.foreach { classFile =>
+        deletedClasses.add(classFile)
+        invalidatedClassFilesInLastRun.add(classFile)
+      }
       IO.deleteFilesEmptyDirs(classes)
+    }
+
+    override def invalidatedClassFiles(): Array[File] =
+      invalidatedClassFilesInLastRun.toArray
     override def generated(classes: Array[File]): Unit = ()
     override def complete(success: Boolean): Unit = ()
   }
@@ -132,19 +143,26 @@ object ClassFileManager {
 
     private[this] val generatedClasses = new mutable.HashSet[File]
     private[this] val movedClasses = new mutable.HashMap[File, File]
+    private[this] val invalidatedClassFilesInLastRun = new mutable.HashSet[File]
 
     private def showFiles(files: Iterable[File]): String =
       files.map(f => s"\t$f").mkString("\n")
 
     override def delete(classes: Array[File]): Unit = {
+      invalidatedClassFilesInLastRun.clear()
       logger.debug(s"About to delete class files:\n${showFiles(classes)}")
       val toBeBackedUp =
         classes.filter(c => c.exists && !movedClasses.contains(c) && !generatedClasses(c))
       logger.debug(s"We backup class files:\n${showFiles(toBeBackedUp)}")
       for (c <- toBeBackedUp) {
         movedClasses.put(c, move(c))
+        invalidatedClassFilesInLastRun.add(c)
       }
       IO.deleteFilesEmptyDirs(classes)
+    }
+
+    override def invalidatedClassFiles(): Array[File] = {
+      invalidatedClassFilesInLastRun.toArray
     }
 
     override def generated(classes: Array[File]): Unit = {
@@ -183,6 +201,7 @@ object ClassFileManager {
     }
     override def generated(classes: Array[File]): Unit = ()
     override def complete(success: Boolean): Unit = ()
+    override def invalidatedClassFiles(): Array[File] = new Array[File](0)
   }
 
   /**
@@ -208,6 +227,7 @@ object ClassFileManager {
       outputJarContent.removeClasses(classes.toSet)
     }
 
+    override def invalidatedClassFiles(): Array[File] = new Array[File](0)
     override def generated(classes: Array[File]): Unit = ()
 
     override def complete(success: Boolean): Unit = {

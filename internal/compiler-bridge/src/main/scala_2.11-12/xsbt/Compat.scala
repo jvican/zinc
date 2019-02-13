@@ -23,6 +23,8 @@ object Compat {
 
   // IMain in 2.13 accepts ReplReporter
   def replReporter(settings: Settings, writer: PrintWriter) = writer
+
+  type GlobalSymbolLoaders = scala.tools.nsc.GlobalSymbolLoaders
 }
 
 /** Defines compatibility utils for [[ZincCompiler]]. */

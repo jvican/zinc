@@ -144,6 +144,8 @@ public interface AnalysisCallback {
 
     void definedPickles(xsbti.T2<String, byte[]>[] pickles);
 
+    File[] invalidatedClassFiles();
+
     /**
      * Register a compilation problem.
      *

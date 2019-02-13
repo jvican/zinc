@@ -24,6 +24,8 @@ object Compat {
   // IMain in 2.13 accepts ReplReporter
   def replReporter(settings: Settings, writer: PrintWriter) =
     new ReplReporterImpl(settings, writer)
+
+  type GlobalSymbolLoaders = scala.tools.nsc.GlobalSymbolLoaders
 }
 
 /** Defines compatibility utils for [[ZincCompiler]]. */
@@ -34,12 +36,12 @@ trait ZincGlobalCompat {
   final def instrumentMacroInfrastructure(callback: xsbti.AnalysisCallback): Unit = {
     analyzer.addMacroPlugin(new analyzer.MacroPlugin {
       override def pluginsMacroRuntime(expandee: Tree): Option[analyzer.MacroRuntime] = {
-        callback.macroInvocation(expandee.symbol.fullName)
+        callback.invokedMacro(expandee.symbol.fullName)
         None
       }
 
       override def pluginsTypedMacroBody(typer: analyzer.Typer, ddef: DefDef): Option[Tree] = {
-        callback.macroDefinition(ddef.symbol.fullName)
+        callback.definedMacro(ddef.symbol.fullName)
         None
       }
     })

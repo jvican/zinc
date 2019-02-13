@@ -31,6 +31,16 @@ public interface ClassFileManager {
      */
     void delete(File[] classes);
 
+    /**
+     * Tells the caller what class files have been invalidated and should not
+     * be used to compile the next incremental compiler run. This method is
+     * necessary in case the class file manager does not delete class files in
+     * the classes directory.
+     * 
+     * @return classes An array of all class files that were associated to invalidated symbols.
+     */
+    File[] invalidatedClassFiles();
+
     /** Called once per compilation step with the class files generated during that step. */
     /**
      * Handler of classes that decides where certain class files should be

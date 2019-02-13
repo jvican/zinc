@@ -34,6 +34,9 @@ class ClassFileManagerHookSpec extends BaseCompilerSpec {
         override def complete(success: Boolean): Unit = {
           callbackCalled += 1
         }
+        override def invalidatedClassFiles(): Array[File] = {
+          new Array[File](0)
+        }
       }
 
       val incOptions = IncOptions.of()
