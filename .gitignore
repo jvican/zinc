@@ -6,3 +6,4 @@ target-2.13/
 zinc/src/test/resources/bin
 .idea
 .ivy2/
+.bloop/
