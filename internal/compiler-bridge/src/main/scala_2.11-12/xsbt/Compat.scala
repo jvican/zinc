@@ -27,7 +27,22 @@ object Compat {
 
 /** Defines compatibility utils for [[ZincCompiler]]. */
 trait ZincGlobalCompat {
+  self: CallbackGlobal =>
   protected def superDropRun(): Unit = ()
+
+  final def instrumentMacroInfrastructure(callback: xsbti.AnalysisCallback): Unit = {
+    analyzer.addMacroPlugin(new analyzer.MacroPlugin {
+      override def pluginsMacroRuntime(expandee: Tree): Option[analyzer.MacroRuntime] = {
+        callback.invokedMacro(expandee.symbol.fullName)
+        None
+      }
+
+      override def pluginsTypedMacroBody(typer: analyzer.Typer, ddef: DefDef): Option[Tree] = {
+        callback.definedMacro(ddef.symbol.fullName)
+        None
+      }
+    })
+  }
 }
 
 private trait CachedCompilerCompat { self: CachedCompiler0 =>

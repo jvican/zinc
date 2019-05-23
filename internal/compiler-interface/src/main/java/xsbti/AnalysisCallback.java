@@ -138,6 +138,12 @@ public interface AnalysisCallback {
      */
     void usedName(String className, String name, EnumSet<UseScope> useScopes);
 
+    void definedMacro(String symbolName);
+
+    void invokedMacro(String invokedMacroSymbol);
+
+    void definedPickles(xsbti.T2<String, byte[]>[] pickles);
+
     /**
      * Register a compilation problem.
      *

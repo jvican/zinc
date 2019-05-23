@@ -450,6 +450,10 @@ private final class AnalysisCallback(
 
   override def apiPhaseCompleted(): Unit = {}
 
+  override def definedMacro(symbolName: String): Unit = ()
+  override def invokedMacro(invokedMacroSymbol: String): Unit = ()
+  override def definedPickles(pickles: Array[xsbti.T2[String, Array[Byte]]]): Unit = ()
+
   override def classesInOutputJar(): java.util.Set[String] = {
     outputJarContent.get().asJava
   }

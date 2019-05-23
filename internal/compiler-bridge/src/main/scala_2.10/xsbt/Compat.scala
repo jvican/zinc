@@ -146,6 +146,7 @@ abstract class Compat {
 
 /** Defines compatibility utils for [[ZincCompiler]]. */
 trait ZincGlobalCompat {
+  self: CallbackGlobal =>
 
   /** Use `dropRun` only in 2.10.x series. It was removed as of 2.11.0. */
   protected def superDropRun(): Unit = {
@@ -159,6 +160,8 @@ trait ZincGlobalCompat {
     catch { case e: NoSuchMethodException => () }
     ()
   }
+
+  final def instrumentMacroInfrastructure(callback: xsbti.AnalysisCallback): Unit = ()
 }
 
 object Compat {
@@ -182,6 +185,8 @@ object Compat {
     // Missing in 2.10
     @inline final def finalPosition: sriu.Position = self.source positionInUltimateSource self
   }
+
+  type GlobalSymbolLoaders = scala.tools.nsc.symtab.SymbolLoaders
 }
 
 private trait CachedCompilerCompat { self: CachedCompiler0 =>

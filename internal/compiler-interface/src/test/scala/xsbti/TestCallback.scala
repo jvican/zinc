@@ -23,6 +23,9 @@ class TestCallback extends AnalysisCallback {
 
   val classDependencies = new ArrayBuffer[(String, String, DependencyContext)]
   val binaryDependencies = new ArrayBuffer[(File, String, String, DependencyContext)]
+  val definedMacros = new ArrayBuffer[String]
+  val invokedMacros = new ArrayBuffer[String]
+  val pickles = scala.collection.mutable.Map.empty[String, Array[Byte]]
   val productClassesToSources = scala.collection.mutable.Map.empty[File, File]
   val usedNamesAndScopes =
     scala.collection.mutable.Map.empty[String, Set[TestUsedName]].withDefaultValue(Set.empty)
@@ -88,6 +91,20 @@ class TestCallback extends AnalysisCallback {
   override def dependencyPhaseCompleted(): Unit = {}
 
   override def apiPhaseCompleted(): Unit = {}
+
+  override def definedMacro(symbolName: String): Unit = {
+    definedMacros.+=(symbolName)
+  }
+
+  override def invokedMacro(invokedMacroSymbol: String): Unit = {
+    invokedMacros.+=(invokedMacroSymbol)
+  }
+
+  override def definedPickles(ps: Array[xsbti.T2[String, Array[Byte]]]): Unit = {
+    ps.foreach { javaTuple =>
+      pickles.put(javaTuple.get1(), javaTuple.get2())
+    }
+  }
 
   override def classesInOutputJar(): util.Set[String] = java.util.Collections.emptySet()
 }
