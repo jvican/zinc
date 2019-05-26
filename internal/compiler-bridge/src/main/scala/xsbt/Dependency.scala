@@ -129,6 +129,9 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
           case pf: PlainFile =>
             // The dependency comes from a class file
             binaryDependency(pf.file, binaryClassName)
+          case PicklerGen.PickleFile(f) =>
+            // The dependency comes from an in-memory ir (build pipelining is enabled)
+            binaryDependency(f, binaryClassName)
           case _ =>
           // On Scala 2.10 you get Internal error: <none> comes from unknown origin null
           // if you uncomment the following:

@@ -4,7 +4,7 @@ import Compat._
 import java.io.File
 import scala.collection.mutable
 
-abstract class ZincSymbolLoaders extends GlobalSymbolLoaders {
+abstract class ZincSymbolLoaders extends GlobalSymbolLoaders with ZincPickleCompletion {
   import global._
   import scala.tools.nsc.io.AbstractFile
   import scala.tools.nsc.util.ClassRepresentation
@@ -23,9 +23,30 @@ abstract class ZincSymbolLoaders extends GlobalSymbolLoaders {
         val classFile: File = bin.file
         if (classFile != null && invalidatedClassFilePaths.contains(classFile.getCanonicalPath)) {
           () // An invalidated class file should not be loaded
+        } else if (bin.path.startsWith("_BPICKLE_")) {
+          enterClassAndModule(owner, classRep.name, new ZincPickleLoader(bin))
         } else {
           enterClassAndModule(owner, classRep.name, newClassLoader(bin))
         }
+    }
+  }
+
+  final class ZincPickleLoader(val pickleFile: AbstractFile)
+      extends SymbolLoader
+      with FlagAssigningCompleter {
+
+    override def description = "pickle file from " + pickleFile.toString
+    override def doComplete(sym: symbolTable.Symbol): Unit = {
+      val clazz = {
+        if (!sym.isModule) sym
+        else {
+          val s = sym.companionClass
+          if (s == NoSymbol) sym.moduleClass else s
+        }
+      }
+
+      val module = if (sym.isModule) sym else sym.companionModule
+      pickleComplete(pickleFile, clazz.asClass, module.asModule, sym)
     }
   }
 }

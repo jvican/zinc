@@ -12,6 +12,7 @@
 package xsbti;
 
 import xsbti.api.DependencyContext;
+import xsbti.compile.Signature;
 
 import java.io.File;
 import java.util.EnumSet;
@@ -142,7 +143,11 @@ public interface AnalysisCallback {
 
     void invokedMacro(String invokedMacroSymbol);
 
-    void definedPickles(xsbti.T2<String, byte[]>[] pickles);
+    void definedSignatures(Signature[] signatures);
+
+    boolean isPipeliningEnabled();
+
+    Signature[] downstreamSignatures();
 
     File[] invalidatedClassFiles();
 

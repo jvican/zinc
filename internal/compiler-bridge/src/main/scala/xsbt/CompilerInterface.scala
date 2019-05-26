@@ -112,6 +112,12 @@ private final class CachedCompiler0(args: Array[String], output: Output, initial
           log: Logger,
           delegate: Reporter,
           progress: CompileProgress): Unit = synchronized {
+    // Set signatures as soon as possible
+    val signatures = callback.downstreamSignatures()
+    if (callback.isPipeliningEnabled() && !signatures.isEmpty) {
+      compiler.setPicklepath(signatures)
+    }
+
     debug(log, infoOnCachedCompiler(hashCode().toLong.toHexString))
     val dreporter = DelegatingReporter(settings, delegate)
     try { run(sources.toList, changes, callback, log, dreporter, progress) } finally {

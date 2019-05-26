@@ -17,4 +17,9 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
 
 object PicklerGen {
   def name = "picklergen"
+  import scala.reflect.io.AbstractFile
+  object PickleFile {
+    import java.io.File
+    def unapply(arg: AbstractFile): Option[File] = None
+  }
 }

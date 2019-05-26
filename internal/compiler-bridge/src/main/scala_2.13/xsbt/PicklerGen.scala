@@ -2,7 +2,7 @@ package xsbt
 
 import java.net.URI
 
-import xsbti.T2
+import xsbti.compile.Signature
 
 import scala.tools.nsc.Phase
 import scala.collection.mutable
@@ -18,25 +18,23 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
     def apply(unit: global.CompilationUnit): Unit = ()
 
     override def run(): Unit = {
-      val start = System.currentTimeMillis
-      super.run()
-      val pickles = toPickles(global.currentRun.symData)
-      callback.definedPickles(pickles)
-      val stop = System.currentTimeMillis
-      debuglog("Picklergen phase took : " + ((stop - start) / 1000.0) + " s")
+      if (!global.callback.isPipeliningEnabled) ()
+      else {
+        val start = System.currentTimeMillis
+        super.run()
+        val signatures = toSignatures(global.currentRun.symData)
+        callback.definedSignatures(signatures)
+        val stop = System.currentTimeMillis
+        debuglog("Picklergen phase took : " + ((stop - start) / 1000.0) + " s")
+      }
     }
 
-    type JavaPickleMapping = T2[String, Array[Byte]]
-    case class PickleMapping(picklePath: String, bytes: Array[Byte]) extends JavaPickleMapping {
-      def get1(): String = picklePath
-      def get2(): Array[Byte] = bytes
-    }
-
-    def toPickles(pickles: mutable.Map[global.Symbol, PickleBuffer]): Array[JavaPickleMapping] = {
-      val buffer = new mutable.ArrayBuffer[JavaPickleMapping]
+    def toSignatures(pickles: mutable.Map[global.Symbol, PickleBuffer]): Array[Signature] = {
+      val buffer = new mutable.ArrayBuffer[Signature]
       pickles.foreach {
         case (symbol, pickle) =>
           val javaName = symbol.javaBinaryNameString
+          val associatedOutput = global.settings.outputDirs.outputDirFor(symbol.associatedFile).file
           val bytes = pickle.bytes.take(pickle.writeIndex)
           if (symbol.isModule) {
             if (symbol.companionClass == NoSymbol) {
@@ -53,13 +51,13 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
                * it out in `toIndex`, but still generate a fake class file for it
                * in `toVirtualFile`.
                */
-              buffer.+=(PickleMapping(javaName, bytes))
-              buffer.+=(PickleMapping(companionJavaName, Array()))
+              buffer.+=(new Signature(javaName, associatedOutput, bytes))
+              buffer.+=(new Signature(companionJavaName, associatedOutput, Array()))
             } else {
-              buffer.+=(PickleMapping(javaName, bytes))
+              buffer.+=(new Signature(javaName, associatedOutput, bytes))
             }
           } else {
-            buffer.+=(PickleMapping(javaName, bytes))
+            buffer.+=(new Signature(javaName, associatedOutput, bytes))
           }
       }
       buffer.toArray
@@ -69,4 +67,16 @@ final class PicklerGen(val global: CallbackGlobal) extends Compat with GlobalHel
 
 object PicklerGen {
   def name = "picklergen"
+  import scala.reflect.io.AbstractFile
+  object PickleFile {
+    import java.io.File
+    def unapply(arg: AbstractFile): Option[File] = {
+      arg match {
+        case vf: PickleVirtualFile =>
+          // The dependency comes from an in-memory ir (build pipelining is enabled)
+          Some(new File(vf.sig.associatedOutput(), vf.path.stripPrefix("_BPICKLE_")))
+        case _ => None
+      }
+    }
+  }
 }

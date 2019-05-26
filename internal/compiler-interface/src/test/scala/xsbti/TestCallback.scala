@@ -14,6 +14,7 @@ package xsbti
 import java.io.File
 import java.util
 
+import xsbti.compile.Signature
 import xsbti.api.{ DependencyContext, ClassLike }
 
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +26,7 @@ class TestCallback extends AnalysisCallback {
   val binaryDependencies = new ArrayBuffer[(File, String, String, DependencyContext)]
   val definedMacros = new ArrayBuffer[String]
   val invokedMacros = new ArrayBuffer[String]
-  val pickles = scala.collection.mutable.Map.empty[String, Array[Byte]]
+  val pickles = scala.collection.mutable.Set.empty[Signature]
   val productClassesToSources = scala.collection.mutable.Map.empty[File, File]
   val usedNamesAndScopes =
     scala.collection.mutable.Map.empty[String, Set[TestUsedName]].withDefaultValue(Set.empty)
@@ -100,10 +101,10 @@ class TestCallback extends AnalysisCallback {
     invokedMacros.+=(invokedMacroSymbol)
   }
 
-  override def definedPickles(ps: Array[xsbti.T2[String, Array[Byte]]]): Unit = {
-    ps.foreach { javaTuple =>
-      pickles.put(javaTuple.get1(), javaTuple.get2())
-    }
+  override def isPipeliningEnabled(): Boolean = false
+  override def downstreamSignatures(): Array[Signature] = new Array[Signature](0)
+  override def definedSignatures(signatures: Array[Signature]): Unit = {
+    pickles.++=(signatures.iterator)
   }
 
   override def invalidatedClassFiles(): Array[File] = new Array[File](0)

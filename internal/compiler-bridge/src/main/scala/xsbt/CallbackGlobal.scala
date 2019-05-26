@@ -25,7 +25,8 @@ sealed abstract class CallbackGlobal(
     settings: Settings,
     reporter: reporters.Reporter,
     output: Output
-) extends Global(settings, reporter) {
+) extends Global(settings, reporter)
+    with ZincPicklePath {
   import Compat._
 
   override lazy val loaders = new {
