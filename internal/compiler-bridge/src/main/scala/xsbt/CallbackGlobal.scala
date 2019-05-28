@@ -178,21 +178,24 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
     def findOnPreviousCompilationProducts(name: String): Option[AbstractFile] = {
       // This class file path is relative to the output jar/directory and computed from class name
       val classFilePath = name.replace('.', '/') + ".class"
+      // This lookup could be improved if a hint where to look is given.
+      outputDirs.map(new File(_, classFilePath)).find(_.exists()).map(AbstractFile.getFile(_))
 
+      /*
       JarUtils.outputJar match {
         case Some(outputJar) =>
           if (!callback.classesInOutputJar().contains(classFilePath)) None
           else {
             /*
-             * Important implementation detail: `classInJar` has the format of `$JAR!$CLASS_REF`
-             * which is, of course, a path to a file that does not exist. This file path is
-             * interpreted especially by Zinc to decompose the format under straight-to-jar
-             * compilation. For this strategy to work, `PlainFile` must **not** check that
-             * this file does exist or not because, if it does, it will return `null` in
-             * `processExternalDependency` and the dependency will not be correctly registered.
-             * If scalac breaks this contract (the check for existence is done when creating
-             * a normal reflect file but not a plain file), Zinc will not work correctly.
-             */
+     * Important implementation detail: `classInJar` has the format of `$JAR!$CLASS_REF`
+     * which is, of course, a path to a file that does not exist. This file path is
+     * interpreted especially by Zinc to decompose the format under straight-to-jar
+     * compilation. For this strategy to work, `PlainFile` must **not** check that
+     * this file does exist or not because, if it does, it will return `null` in
+     * `processExternalDependency` and the dependency will not be correctly registered.
+     * If scalac breaks this contract (the check for existence is done when creating
+     * a normal reflect file but not a plain file), Zinc will not work correctly.
+     */
             Some(new PlainFile(JarUtils.classNameInJar(outputJar, classFilePath)))
           }
 
@@ -200,6 +203,7 @@ sealed class ZincCompiler(settings: Settings, dreporter: DelegatingReporter, out
           // This lookup could be improved if a hint where to look is given.
           outputDirs.map(new File(_, classFilePath)).find(_.exists()).map(AbstractFile.getFile(_))
       }
+     */
     }
 
     def findOnClassPath(name: String): Option[AbstractFile] =

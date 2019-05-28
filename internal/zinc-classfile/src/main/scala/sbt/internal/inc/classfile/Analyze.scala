@@ -141,10 +141,13 @@ private[sbt] object Analyze {
               } else {
                 val cachedOrigin = classfilesCache.get(onBinaryName)
                 for (file <- cachedOrigin.orElse(loadFromClassloader())) {
+                  val binaryFile = file
+                  /*
                   val binaryFile = {
                     if (singleOutputOrNull == null || outputJarOrNull == null) file
                     else resolveFinalClassFile(file, singleOutputOrNull, outputJarOrNull, log)
                   }
+                   */
 
                   analysis.binaryDependency(binaryFile,
                                             onBinaryName,
