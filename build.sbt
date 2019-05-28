@@ -229,7 +229,7 @@ lazy val zincPersist = (project in internalPath / "zinc-persist")
     name := "zinc Persist",
     libraryDependencies += sbinary,
     libraryDependencies ++= (scalaVersion.value match {
-      case v if v.startsWith("2.12.") => List(compilerPlugin(silencerPlugin))
+      case v if v.startsWith("2.12.") => List(compilerPlugin(silencerPlugin), silencerLib)
       case _                          => List()
     }),
     compileOrder := sbt.CompileOrder.Mixed,

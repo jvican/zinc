@@ -158,7 +158,7 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
     val position = problem.position
       .map(fromPosition)
       .getOrElse(ReadersFeedback.ExpectedPositionInProblem.!!)
-    InterfaceUtil.problem(category, position, message, severity, None)
+    InterfaceUtil.problem(category, position, message, severity)
   }
 
   def fromSourceInfo(sourceInfo: schema.SourceInfo): SourceInfo = {

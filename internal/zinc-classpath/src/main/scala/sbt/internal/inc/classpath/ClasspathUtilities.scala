@@ -18,6 +18,7 @@ import java.io.File
 import java.net.{ URI, URL, URLClassLoader }
 import sbt.io.{ IO, Path, PathFinder, Using }
 import xsbti.compile.ScalaInstance
+import scala.util.control.NonFatal
 
 object ClasspathUtilities {
   def toLoader(finder: PathFinder): ClassLoader = toLoader(finder, rootLoader)
@@ -101,7 +102,116 @@ object ClasspathUtilities {
     toLoader(classpath, parent, createClasspathResources(classpath, instance), nativeTemp)
 
   private[sbt] def printSource(c: Class[_]) =
-    println(c.getName + " loader=" + c.getClassLoader + " location=" + IO.classLocationPath(c))
+    println(c.getName + " loader=" + c.getClassLoader + " location=" + classLocationPath(c))
+
+  import java.nio.file.{ Path, FileSystems }
+  private[sbt] val FileScheme = "file"
+  private lazy val jrtFs = FileSystems.getFileSystem(URI.create("jrt:/"))
+
+  def toFile(url: URL): File = {
+    import java.net.URISyntaxException
+    try { uriToFile(url.toURI) } catch { case _: URISyntaxException => new File(url.getPath) }
+  }
+
+  def urlAsFile(url: URL): Option[File] =
+    url.getProtocol match {
+      case FileScheme => Some(toFile(url))
+      case "jar" =>
+        val path = url.getPath
+        val end = path.indexOf('!')
+        Some(uriToFile(if (end == -1) path else path.substring(0, end)))
+      case _ => None
+    }
+
+  private[this] def uriToFile(uriString: String): File = uriToFile(new URI(uriString))
+
+  /**
+   * Converts the given file URI to a File.
+   */
+  private[this] def uriToFile(uri: URI): File = {
+    val part = uri.getSchemeSpecificPart
+    // scheme might be omitted for relative URI reference.
+    assert(
+      Option(uri.getScheme) match {
+        case None | Some(FileScheme) => true
+        case _                       => false
+      },
+      s"Expected protocol to be '$FileScheme' or empty in URI $uri"
+    )
+    Option(uri.getAuthority) match {
+      case None if part startsWith "/" => new File(uri)
+      case _                           =>
+        // https://github.com/sbt/sbt/issues/564
+        // https://github.com/sbt/sbt/issues/3086
+        // http://blogs.msdn.com/b/ie/archive/2006/12/06/file-uris-in-windows.aspx
+        // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=5086147
+        // The specific problem here is that `uri` will have a defined authority component for UNC names like //foo/bar/some/path.jar
+        // but the File constructor requires URIs with an undefined authority component.
+        if (!(part startsWith "/") && (part contains ":")) new File("//" + part)
+        else new File(part)
+    }
+  }
+
+  /**
+   * Returns the NIO Path to the directory, Java module, or the JAR file containing the class file `cl`.
+   * If the location cannot be determined, an error is generated.
+   * Note that for JDK 11 onwards, a module will return a jrt path.
+   */
+  def classLocationPath(cl: Class[_]): Path = {
+    val u = classLocation(cl)
+    val p = u.getProtocol match {
+      case FileScheme => Option(toFile(u).toPath)
+      case "jar"      => urlAsFile(u) map { _.toPath }
+      case "jrt"      => Option(jrtFs.getPath(u.getPath))
+      case _          => None
+    }
+    p.getOrElse(sys.error(s"Unable to create File from $u for $cl"))
+  }
+
+  /**
+   * Returns the URL to the directory, Java module, or the JAR file containing the class file `cl`.
+   * If the location cannot be determined or it is not a file, an error is generated.
+   * Note that for JDK 11 onwards, a module will return a jrt URL such as `jrt:/java.base`.
+   */
+  def classLocation(cl: Class[_]): URL = {
+    def localcl: Option[URL] =
+      Option(cl.getProtectionDomain.getCodeSource) flatMap { codeSource =>
+        Option(codeSource.getLocation)
+      }
+    // This assumes that classes without code sources are System classes, and thus located in jars.
+    // It returns a URL that looks like jar:file:/Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home/jre/lib/rt.jar!/java/lang/Integer.class
+    val clsfile = s"${cl.getName.replace('.', '/')}.class"
+    def syscl: Option[URL] =
+      Option(ClassLoader.getSystemClassLoader) flatMap { classLoader =>
+        Option(classLoader.getResource(clsfile))
+      }
+    try {
+      localcl
+        .orElse(syscl)
+        .map(url =>
+          url.getProtocol match {
+            case "jar" =>
+              val path = url.getPath
+              val end = path.indexOf('!')
+              new URL(
+                if (end == -1) path
+                else path.substring(0, end))
+            case "jrt" =>
+              val path = url.getPath
+              val end = path.indexOf('/', 1)
+              new URL("jrt",
+                      null,
+                      if (end == -1) path
+                      else path.substring(0, end))
+            case _ => url
+        })
+        .getOrElse(sys.error("No class location for " + cl))
+    } catch {
+      case NonFatal(e) =>
+        e.printStackTrace()
+        throw e
+    }
+  }
 
   def isArchive(file: File): Boolean = isArchive(file, contentFallback = false)
 
@@ -123,7 +233,8 @@ object ClasspathUtilities {
   /** Returns all entries in 'classpath' that correspond to a compiler plugin.*/
   private[sbt] def compilerPlugins(classpath: Seq[File], isDotty: Boolean): Iterable[File] = {
     import collection.JavaConverters._
-    val loader = new URLClassLoader(Path.toURLs(classpath))
+    def toURLs(files: Seq[File]): Array[URL] = files.map(_.toURI.toURL).toArray
+    val loader = new URLClassLoader(toURLs(classpath))
     val metaFile = if (isDotty) "plugin.properties" else "scalac-plugin.xml"
     loader.getResources(metaFile).asScala.toList.flatMap(asFile(true))
   }

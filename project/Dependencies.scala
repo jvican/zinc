@@ -7,8 +7,8 @@ object Dependencies {
   val scala212 = "2.12.8"
   val scala213 = "2.13.0-RC1"
 
-  private val ioVersion = "1.3.0-M4"
-  private val utilVersion = "1.3.0-M4"
+  private val ioVersion = "1.2.0"
+  private val utilVersion = "1.2.1"
 
   private val sbtIO = "org.scala-sbt" %% "io" % ioVersion
 
@@ -65,6 +65,7 @@ object Dependencies {
   val parserCombinator = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
   val sbinary = "org.scala-sbt" %% "sbinary" % "0.4.4"
   val silencerPlugin = "com.github.ghik" %% "silencer-plugin" % "1.2"
+  val silencerLib = "com.github.ghik" %% "silencer-lib" % "1.2" % Provided
   val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0"
   val scalatest = "org.scalatest" %% "scalatest" % "3.0.5"
   val junit = "junit" % "junit" % "4.11"
