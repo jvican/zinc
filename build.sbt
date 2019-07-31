@@ -124,8 +124,6 @@ val noPublish: Seq[Setting[_]] = List(
   skip in publish := true,
 )
 
-// TODO: Test Scala 2.13.0 when we upgrade to M5 (this means we need to publish sbt dependencies for this milestone too)
-
 // zincRoot is now only 2.12 (2.11.x is not supported anymore)
 lazy val zincRoot: Project = (project in file("."))
   .aggregate(
@@ -600,11 +598,7 @@ lazy val compilerBridge213 = compilerBridgeTemplate
   .settings(
     scalaVersion := scala213,
     crossScalaVersions := Seq(scala213),
-    // remove the following after 2.13.0 is released
-    scalaBinaryVersion := "2.13",
-    target := (target in compilerBridgeTemplate).value.getParentFile / "target-2.13",
-    bloopGenerate in Compile := None,
-    bloopGenerate in Test := None,
+    target := (target in compilerBridgeTemplate).value.getParentFile / "target-2.13"
   )
 
 /**
