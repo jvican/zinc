@@ -611,9 +611,10 @@ final class ProtobufWriters(mapper: WriteMapper) {
     }
 
     def toUsedNamesMap(relation: Relation[String, UsedName]): Map[String, schema.UsedNames] = {
-      relation.forwardMap.mapValues { names =>
-        val usedNames = names.iterator.map(toUsedName).toList
-        schema.UsedNames(usedNames = usedNames)
+      relation.forwardMap.map {
+        case (key, names) =>
+          val usedNames = names.iterator.map(toUsedName).toList
+          key -> schema.UsedNames(usedNames = usedNames)
       }
     }
 
@@ -671,8 +672,8 @@ final class ProtobufWriters(mapper: WriteMapper) {
 
   def toApis(apis: APIs, shouldStoreApis: Boolean): schema.APIs = {
     val toAnalyzedClassSchema = toAnalyzedClass(shouldStoreApis) _
-    val internal = apis.internal.mapValues(toAnalyzedClassSchema)
-    val external = apis.external.mapValues(toAnalyzedClassSchema)
+    val internal = apis.internal.map(kv => kv._1 -> toAnalyzedClassSchema(kv._2))
+    val external = apis.external.map(kv => kv._1 -> toAnalyzedClassSchema(kv._2))
     schema.APIs(internal = internal, external = external)
   }
 

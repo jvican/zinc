@@ -177,7 +177,7 @@ private[sbt] object Analyze {
 
       def readInheritanceDependencies(classes: Seq[Class[_]]) = {
         val api = readAPI(source, classes)
-        api.groupBy(_._1).mapValues(_.map(_._2))
+        api.groupBy(_._1).map(kv => kv._1 -> kv._2.map(_._2))
       }
 
       // Read API of non-local classes and process dependencies by inheritance

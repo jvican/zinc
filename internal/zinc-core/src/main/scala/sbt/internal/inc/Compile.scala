@@ -402,9 +402,15 @@ private final class AnalysisCallback(
           .map(_._1)
         val analyzedApis = classesInSrc.map(analyzeClass)
         val info = SourceInfos.makeInfo(
-          getOrNil(reporteds.mapValues { _.asScala.toSeq }, src),
-          getOrNil(unreporteds.mapValues { _.asScala.toSeq }, src),
-          getOrNil(mainClasses.mapValues { _.asScala.toSeq }, src)
+          getOrNil(reporteds.map { kv =>
+            kv._1 -> kv._2.asScala.toSeq
+          }, src),
+          getOrNil(unreporteds.map { kv =>
+            kv._1 -> kv._2.asScala.toSeq
+          }, src),
+          getOrNil(mainClasses.map { kv =>
+            kv._1 -> kv._2.asScala.toSeq
+          }, src)
         )
         val binaries = binaryDeps.getOrElse(src, ConcurrentHashMap.newKeySet[File]).asScala
         val localProds = localClasses
