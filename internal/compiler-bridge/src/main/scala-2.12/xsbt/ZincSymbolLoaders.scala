@@ -5,7 +5,7 @@ import java.io.File
 import scala.collection.mutable
 import scala.tools.nsc.ZincPicklePath
 
-abstract class ZincSymbolLoaders extends GlobalSymbolLoaders with ZincPickleCompletion {
+trait ZincSymbolLoaders extends GlobalSymbolLoaders with ZincPickleCompletion {
   import global._
   import scala.tools.nsc.io.AbstractFile
   import scala.tools.nsc.util.ClassRepresentation

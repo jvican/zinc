@@ -4,7 +4,7 @@ import Compat._
 import java.io.File
 import scala.collection.mutable
 
-abstract class ZincSymbolLoaders extends GlobalSymbolLoaders {
+trait ZincSymbolLoaders extends GlobalSymbolLoaders {
   val invalidatedClassFilePaths: mutable.HashSet[String] = new mutable.HashSet[String]()
 
   import global._
