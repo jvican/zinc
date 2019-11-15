@@ -1,10 +1,11 @@
 package xsbt
 
 import scala.reflect.io.NoAbstractFile
+import scala.tools.nsc.Global
 import scala.tools.nsc.io.AbstractFile
 
 trait ZincPickleCompletion {
-  val global: CallbackGlobal
+  val global: Global
   import global._
 
   /** Load source or class file for `root` from Scala pickles.
