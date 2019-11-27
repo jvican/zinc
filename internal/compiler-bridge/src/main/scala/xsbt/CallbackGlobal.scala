@@ -26,13 +26,9 @@ sealed abstract class CallbackGlobal(
     reporter: reporters.Reporter,
     output: Output
 ) extends Global(settings, reporter)
+    with ExtraGlobal
     with ZincPicklePath {
   import Compat._
-
-  override lazy val loaders = new {
-    val global: CallbackGlobal.this.type = CallbackGlobal.this
-    val platform: CallbackGlobal.this.platform.type = CallbackGlobal.this.platform
-  } with ZincSymbolLoaders
 
   def setInvalidatedClassFiles(invalidatedClassFiles: Array[File]): Unit = {
     loaders.invalidatedClassFilePaths.clear()
