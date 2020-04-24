@@ -124,8 +124,12 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
             for {
               zip <- zipEntry.underlyingSource
               jarFile <- Option(zip.file)
-              if !jarFile.isDirectory // workaround for JDK9 and Scala 2.10/2.11, see https://github.com/sbt/sbt/pull/3701
-            } binaryDependency(jarFile, binaryClassName)
+            } {
+              // workaround for JDK9 and Scala 2.10/2.11, see https://github.com/sbt/sbt/pull/3701
+              val ignore = zip.file == null || (!zip.hasExtension("jar") && zip.isDirectory)
+              if (!ignore)
+                binaryDependency(zip.file.toPath, binaryClassName)
+            }
           case pf: PlainFile =>
             // The dependency comes from a class file
             binaryDependency(pf.file, binaryClassName)
