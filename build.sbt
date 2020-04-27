@@ -24,7 +24,7 @@ def mimaSettings: Seq[Setting[_]] = Seq(
       version =>
         organization.value %% moduleName.value % version
           cross (if (crossPaths.value) CrossVersion.binary else CrossVersion.disabled)
-    )
+  )
 )
 
 ThisBuild / licenses := List(("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0")))
@@ -93,6 +93,7 @@ def commonSettings: Seq[Setting[_]] = Seq(
     "-YdisableFlatCpCaching",
     "-target:jvm-1.8"
   ),
+  scalacOptions -= "-Xfatal-warnings",
   // Override the version that scalapb depends on. This adds an explicit dependency on
   // protobuf-java. This will cause sbt to evict the older version that is used by
   // scalapb-runtime.
@@ -111,8 +112,8 @@ def compilerVersionDependentScalacOptions: Seq[Setting[_]] = Seq(
         )
       case _ =>
         old filterNot Set(
-          "-Xfatal-warnings",
-          "-deprecation",
+          //"-Xfatal-warnings",
+          //"-deprecation",
           "-YdisableFlatCpCaching"
         )
     }
@@ -271,7 +272,7 @@ lazy val zincPersist = (project in internalPath / "zinc-persist")
     libraryDependencies += sbinary,
     libraryDependencies ++= (scalaVersion.value match {
       case v if v.startsWith("2.12.") => List(compilerPlugin(silencerPlugin), silencerLib)
-      case _ => List()
+      case _                          => List()
     }),
     compileOrder := sbt.CompileOrder.Mixed,
     Compile / scalacOptions ++= (scalaVersion.value match {
@@ -613,7 +614,7 @@ lazy val compilerBridgeTemplate: Project = (project in internalPath / "compiler-
     noSourcesForTemplate,
     compilerVersionDependentScalacOptions,
     // We need this for import Compat._
-    Compile / scalacOptions --= Seq("-Ywarn-unused-import", "-Xfatal-warnings"),
+    Compile / scalacOptions --= Seq("-Ywarn-unused-import"), //, "-Xfatal-warnings"),
     Compile / scalacOptions ++= (scalaVersion.value match {
       case VersionNumber(Seq(2, 12, _*), _, _) =>
         List("-Ywarn-unused:-imports,-locals,-implicits,-explicits,-privates")
@@ -769,6 +770,7 @@ lazy val zincApiInfoTemplate = (project in internalPath / "zinc-apiinfo")
   .configure(addBaseSettingsAndTestDeps)
   .settings(
     name := "zinc ApiInfo",
+    disableBloop,
     compilerVersionDependentScalacOptions,
     noSourcesForTemplate,
     mimaSettings,
@@ -816,6 +818,7 @@ lazy val zincClasspathTemplate = (project in internalPath / "zinc-classpath")
   .configure(addBaseSettingsAndTestDeps)
   .settings(
     name := "zinc Classpath",
+    disableBloop,
     compilerVersionDependentScalacOptions,
     libraryDependencies ++= Seq(scalaCompiler.value, launcherInterface),
     noSourcesForTemplate,
@@ -842,6 +845,7 @@ lazy val zincClasspath212 = zincClasspathTemplate
 lazy val zincClassfileTemplate = (project in internalPath / "zinc-classfile")
   .configure(addBaseSettingsAndTestDeps)
   .settings(
+    disableBloop,
     name := "zinc Classfile",
     compilerVersionDependentScalacOptions,
     mimaSettings,

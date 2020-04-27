@@ -15,8 +15,8 @@ def relaxNon212: Seq[Setting[_]] = Seq(
     scalaBinaryVersion.value match {
       case "2.12" => old
       case _ =>
-        old filterNot Set("-Xfatal-warnings",
-                          "-deprecation",
+        old filterNot Set( //"-Xfatal-warnings",
+                          //"-deprecation",
                           "-Ywarn-unused",
                           "-Ywarn-unused-import")
     }
