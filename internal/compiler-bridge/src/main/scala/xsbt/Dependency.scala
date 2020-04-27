@@ -128,7 +128,7 @@ final class Dependency(val global: CallbackGlobal) extends LocateClassFile with 
               // workaround for JDK9 and Scala 2.10/2.11, see https://github.com/sbt/sbt/pull/3701
               val ignore = zip.file == null || (!zip.hasExtension("jar") && zip.isDirectory)
               if (!ignore)
-                binaryDependency(zip.file.toPath, binaryClassName)
+                binaryDependency(zip.file, binaryClassName)
             }
           case pf: PlainFile =>
             // The dependency comes from a class file
