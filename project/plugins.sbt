@@ -1,4 +1,4 @@
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.11"
 
 addSbtPlugin("org.scala-sbt" % "sbt-houserules" % "0.3.9")
 addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "1.5.1")
