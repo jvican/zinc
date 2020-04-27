@@ -6,8 +6,6 @@ PROJECT_ROOT="zincRoot"
 sbt -Dfile.encoding=UTF-8 \
   -J-XX:ReservedCodeCacheSize=512M \
   -J-Xms1024M -J-Xmx4096M -J-server \
-  scalafmt::test \
-  test:scalafmt::test \
   "$PROJECT_ROOT/test:compile" \
   crossTestBridges \
   "$PROJECT_ROOT/test" \

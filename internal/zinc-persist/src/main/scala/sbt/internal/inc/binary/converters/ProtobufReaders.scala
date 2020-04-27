@@ -17,15 +17,15 @@ import sbt.internal.inc.Relations.ClassDependencies
 import sbt.internal.inc._
 import sbt.internal.inc.binary.converters.ProtobufDefaults.EmptyLazyCompanions
 import sbt.util.InterfaceUtil
-import xsbti.{Position, Problem, Severity, T2, UseScope}
-import xsbti.compile.{CompileOrder, FileHash, MiniOptions, MiniSetup, Output, OutputGroup}
-import xsbti.compile.analysis.{Compilation, ReadMapper, SourceInfo, Stamp}
+import xsbti.{ Position, Problem, Severity, T2, UseScope }
+import xsbti.compile.{ CompileOrder, FileHash, MiniOptions, MiniSetup, Output, OutputGroup }
+import xsbti.compile.analysis.{ Compilation, ReadMapper, SourceInfo, Stamp }
 import sbt.internal.inc.binary.converters.ProtobufDefaults.Feedback.StringToException
-import sbt.internal.inc.binary.converters.ProtobufDefaults.Feedback.{Readers => ReadersFeedback}
-import sbt.internal.inc.binary.converters.ProtobufDefaults.{Classes, ReadersConstants}
+import sbt.internal.inc.binary.converters.ProtobufDefaults.Feedback.{ Readers => ReadersFeedback }
+import sbt.internal.inc.binary.converters.ProtobufDefaults.{ Classes, ReadersConstants }
 import sbt.internal.util.Relation
 import xsbti.api._
-import ProtobufDefaults.{MissingString, MissingInt}
+import ProtobufDefaults.{ MissingString, MissingInt }
 
 final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) {
   def fromPathString(path: String): File = {
@@ -33,10 +33,10 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
   }
 
   def fromStampType(stampType: schema.Stamps.StampType): Stamp = {
-    import sbt.internal.inc.{EmptyStamp, LastModified, Hash}
+    import sbt.internal.inc.{ EmptyStamp, LastModified, Hash }
     stampType.`type` match {
-      case schema.Stamps.StampType.Type.Empty => EmptyStamp
-      case schema.Stamps.StampType.Type.Hash(h) => Hash.unsafeFromString(h.hash) // fair assumption
+      case schema.Stamps.StampType.Type.Empty            => EmptyStamp
+      case schema.Stamps.StampType.Type.Hash(h)          => Hash.unsafeFromString(h.hash) // fair assumption
       case schema.Stamps.StampType.Type.LastModified(lm) => new LastModified(lm.millis)
     }
   }
@@ -95,7 +95,7 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
   }
 
   def fromCompilationOutput(output: schema.Compilation.Output): Output = {
-    import schema.Compilation.{Output => CompilationOutput}
+    import schema.Compilation.{ Output => CompilationOutput }
     output match {
       case CompilationOutput.SingleOutput(single) =>
         val target = fromPathString(single.target)
@@ -140,9 +140,9 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
 
   def fromSeverity(severity: schema.Severity): Severity = {
     severity match {
-      case schema.Severity.INFO => Severity.Info
-      case schema.Severity.WARN => Severity.Warn
-      case schema.Severity.ERROR => Severity.Error
+      case schema.Severity.INFO             => Severity.Info
+      case schema.Severity.WARN             => Severity.Warn
+      case schema.Severity.ERROR            => Severity.Error
       case schema.Severity.Unrecognized(id) => ReadersFeedback.unrecognizedSeverity(id).!!
     }
   }
@@ -201,9 +201,9 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
 
   def fromCompileOrder(compileOrder: schema.CompileOrder): CompileOrder = {
     compileOrder match {
-      case schema.CompileOrder.MIXED => CompileOrder.Mixed
-      case schema.CompileOrder.JAVATHENSCALA => CompileOrder.JavaThenScala
-      case schema.CompileOrder.SCALATHENJAVA => CompileOrder.ScalaThenJava
+      case schema.CompileOrder.MIXED            => CompileOrder.Mixed
+      case schema.CompileOrder.JAVATHENSCALA    => CompileOrder.JavaThenScala
+      case schema.CompileOrder.SCALATHENJAVA    => CompileOrder.ScalaThenJava
       case schema.CompileOrder.Unrecognized(id) => ReadersFeedback.unrecognizedOrder(id).!!
     }
   }
@@ -213,7 +213,7 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
   }
 
   def fromMiniSetupOutput(output: schema.MiniSetup.Output): Output = {
-    import schema.MiniSetup.{Output => MiniSetupOutput}
+    import schema.MiniSetup.{ Output => MiniSetupOutput }
     output match {
       case MiniSetupOutput.SingleOutput(single) =>
         val targetDir = fromPathString(single.target)
@@ -254,15 +254,15 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
   def fromPath(path: schema.Path): Path = {
     def fromPathComponent(pathComponent: schema.Path.PathComponent): PathComponent = {
       import ReadersFeedback.ExpectedPathInSuper
-      import schema.Path.{PathComponent => SchemaPath}
-      import SchemaPath.{Component => SchemaComponent}
-      import Classes.{Component, PathComponent}
+      import schema.Path.{ PathComponent => SchemaPath }
+      import SchemaPath.{ Component => SchemaComponent }
+      import Classes.{ Component, PathComponent }
       pathComponent.component match {
         case SchemaComponent.Id(c) => Id.of(c.id)
         case SchemaComponent.Super(c) =>
           Super.of(c.qualifier.read(fromPath, ExpectedPathInSuper))
         case SchemaComponent.This(_) => ReadersConstants.This
-        case SchemaComponent.Empty => ReadersFeedback.expected(Component, PathComponent).!!
+        case SchemaComponent.Empty   => ReadersFeedback.expected(Component, PathComponent).!!
       }
     }
     val components = path.components.toZincArray(fromPathComponent)
@@ -337,17 +337,17 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
     }
 
     `type`.value match {
-      case schema.Type.Value.ParameterRef(tpe) => fromParameterRef(tpe)
+      case schema.Type.Value.ParameterRef(tpe)  => fromParameterRef(tpe)
       case schema.Type.Value.Parameterized(tpe) => fromParameterized(tpe)
-      case schema.Type.Value.Structure(tpe) => fromStructure(tpe)
-      case schema.Type.Value.Polymorphic(tpe) => fromPolymorphic(tpe)
-      case schema.Type.Value.Constant(tpe) => fromConstant(tpe)
-      case schema.Type.Value.Existential(tpe) => fromExistential(tpe)
-      case schema.Type.Value.Singleton(tpe) => fromSingleton(tpe)
-      case schema.Type.Value.Projection(tpe) => fromProjection(tpe)
-      case schema.Type.Value.Annotated(tpe) => fromAnnotated(tpe)
-      case schema.Type.Value.EmptyType(_) => ReadersConstants.EmptyType
-      case schema.Type.Value.Empty => ReadersFeedback.ExpectedNonEmptyType.!!
+      case schema.Type.Value.Structure(tpe)     => fromStructure(tpe)
+      case schema.Type.Value.Polymorphic(tpe)   => fromPolymorphic(tpe)
+      case schema.Type.Value.Constant(tpe)      => fromConstant(tpe)
+      case schema.Type.Value.Existential(tpe)   => fromExistential(tpe)
+      case schema.Type.Value.Singleton(tpe)     => fromSingleton(tpe)
+      case schema.Type.Value.Projection(tpe)    => fromProjection(tpe)
+      case schema.Type.Value.Annotated(tpe)     => fromAnnotated(tpe)
+      case schema.Type.Value.EmptyType(_)       => ReadersConstants.EmptyType
+      case schema.Type.Value.Empty              => ReadersFeedback.ExpectedNonEmptyType.!!
     }
   }
 
@@ -356,12 +356,12 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
 
   def fromAccess(access: schema.Access): Access = {
     def fromQualifier(qualifier: schema.Qualifier): Qualifier = {
-      import schema.Qualifier.{Type => QualifierType}
+      import schema.Qualifier.{ Type => QualifierType }
       qualifier.`type` match {
-        case QualifierType.IdQualifier(q) => IdQualifier.of(q.value)
+        case QualifierType.IdQualifier(q)   => IdQualifier.of(q.value)
         case QualifierType.ThisQualifier(_) => ReadersConstants.ThisQualifier
-        case QualifierType.Unqualified(_) => ReadersConstants.Unqualified
-        case QualifierType.Empty => ReadersFeedback.ExpectedNonEmptyQualifier.!!
+        case QualifierType.Unqualified(_)   => ReadersConstants.Unqualified
+        case QualifierType.Empty            => ReadersFeedback.ExpectedNonEmptyQualifier.!!
       }
     }
 
@@ -369,25 +369,25 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
       qualifier.read(fromQualifier, ReadersFeedback.ExpectedQualifierInAccess)
 
     access.`type` match {
-      case schema.Access.Type.Public(_) => ReadersConstants.Public
+      case schema.Access.Type.Public(_)    => ReadersConstants.Public
       case schema.Access.Type.Protected(a) => Protected.of(readQualifier(a.qualifier))
-      case schema.Access.Type.Private(a) => Private.of(readQualifier(a.qualifier))
-      case schema.Access.Type.Empty => ReadersFeedback.ExpectedValidAccessType.!!
+      case schema.Access.Type.Private(a)   => Private.of(readQualifier(a.qualifier))
+      case schema.Access.Type.Empty        => ReadersFeedback.ExpectedValidAccessType.!!
     }
   }
 
   def fromDefinitionType(definitionType: schema.DefinitionType): DefinitionType = {
     definitionType match {
-      case schema.DefinitionType.CLASSDEF => DefinitionType.ClassDef
-      case schema.DefinitionType.MODULE => DefinitionType.Module
-      case schema.DefinitionType.TRAIT => DefinitionType.Trait
-      case schema.DefinitionType.PACKAGEMODULE => DefinitionType.PackageModule
+      case schema.DefinitionType.CLASSDEF        => DefinitionType.ClassDef
+      case schema.DefinitionType.MODULE          => DefinitionType.Module
+      case schema.DefinitionType.TRAIT           => DefinitionType.Trait
+      case schema.DefinitionType.PACKAGEMODULE   => DefinitionType.PackageModule
       case schema.DefinitionType.Unrecognized(_) => ReadersFeedback.UnrecognizedDefinitionType.!!
     }
   }
 
   def fromClassDefinition(classDefinition: schema.ClassDefinition): ClassDefinition = {
-    import ReadersFeedback.{MissingModifiersInDef, MissingAccessInDef, expectedTypeIn}
+    import ReadersFeedback.{ MissingModifiersInDef, MissingAccessInDef, expectedTypeIn }
     import ReadersFeedback.{
       ExpectedReturnTypeInDef,
       ExpectedLowerBoundInTypeDeclaration,
@@ -403,8 +403,8 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
       def fromMethodParameter(methodParameter: schema.MethodParameter): MethodParameter = {
         def fromParameterModifier(modifier: schema.ParameterModifier): ParameterModifier = {
           modifier match {
-            case schema.ParameterModifier.PLAIN => ParameterModifier.Plain
-            case schema.ParameterModifier.BYNAME => ParameterModifier.ByName
+            case schema.ParameterModifier.PLAIN    => ParameterModifier.Plain
+            case schema.ParameterModifier.BYNAME   => ParameterModifier.ByName
             case schema.ParameterModifier.REPEATED => ParameterModifier.Repeated
             case schema.ParameterModifier.Unrecognized(_) =>
               ReadersFeedback.UnrecognizedParamModifier.!!
@@ -458,29 +458,29 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
       TypeDeclaration.of(name, access, modifiers, annotations, typeParams, lowerBound, upperBound)
     }
 
-    import schema.ClassDefinition.{Extra => DefType}
+    import schema.ClassDefinition.{ Extra => DefType }
     classDefinition.extra match {
-      case DefType.ClassLikeDef(d) => fromClassLikeDef(d)
-      case DefType.DefDef(d) => fromDefDef(d)
-      case DefType.ValDef(d) => fromValDef(d)
-      case DefType.VarDef(d) => fromVarDef(d)
-      case DefType.TypeAlias(d) => fromTypeAlias(d)
+      case DefType.ClassLikeDef(d)    => fromClassLikeDef(d)
+      case DefType.DefDef(d)          => fromDefDef(d)
+      case DefType.ValDef(d)          => fromValDef(d)
+      case DefType.VarDef(d)          => fromVarDef(d)
+      case DefType.TypeAlias(d)       => fromTypeAlias(d)
       case DefType.TypeDeclaration(d) => fromTypeDeclaration(d)
-      case DefType.Empty => ReadersFeedback.ExpectedNonEmptyDefType.!!
+      case DefType.Empty              => ReadersFeedback.ExpectedNonEmptyDefType.!!
     }
   }
 
   def fromTypeParameter(typeParameter: schema.TypeParameter): TypeParameter = {
     def fromVariance(variance: schema.Variance): Variance = {
       variance match {
-        case schema.Variance.INVARIANT => Variance.Invariant
-        case schema.Variance.COVARIANT => Variance.Covariant
-        case schema.Variance.CONTRAVARIANT => Variance.Contravariant
+        case schema.Variance.INVARIANT       => Variance.Invariant
+        case schema.Variance.COVARIANT       => Variance.Covariant
+        case schema.Variance.CONTRAVARIANT   => Variance.Contravariant
         case schema.Variance.Unrecognized(_) => ReadersFeedback.UnrecognizedVariance.!!
       }
     }
 
-    import ReadersFeedback.{ExpectedLowerBoundInTypeParameter, ExpectedUpperBoundInTypeParameter}
+    import ReadersFeedback.{ ExpectedLowerBoundInTypeParameter, ExpectedUpperBoundInTypeParameter }
     val id = typeParameter.id
     val annotations = typeParameter.annotations.toZincArray(fromAnnotation)
     val typeParameters = typeParameter.typeParameters.toZincArray(fromTypeParameter)
@@ -498,7 +498,7 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
     val modifiers = classLike.modifiers.read(fromModifiers, expected(Classes.Modifiers))
     val annotations = classLike.annotations.toZincArray(fromAnnotation)
 
-    import SafeLazyProxy.{strict => mkLazy}
+    import SafeLazyProxy.{ strict => mkLazy }
     val definitionType = fromDefinitionType(classLike.definitionType)
     val selfType = mkLazy(classLike.selfType.read(fromType, expectedMsg("self type")))
     val structure = mkLazy(classLike.structure.read(fromStructure, expected(Classes.Structure)))
@@ -523,9 +523,9 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
 
   def fromUseScope(useScope: schema.UseScope): UseScope = {
     useScope match {
-      case schema.UseScope.DEFAULT => UseScope.Default
-      case schema.UseScope.IMPLICIT => UseScope.Implicit
-      case schema.UseScope.PATMAT => UseScope.PatMatTarget
+      case schema.UseScope.DEFAULT          => UseScope.Default
+      case schema.UseScope.IMPLICIT         => UseScope.Implicit
+      case schema.UseScope.PATMAT           => UseScope.PatMatTarget
       case schema.UseScope.Unrecognized(id) => ReadersFeedback.unrecognizedUseScope(id).!!
     }
   }
@@ -547,7 +547,7 @@ final class ProtobufReaders(mapper: ReadMapper, currentVersion: schema.Version) 
       NameHash.of(name, scope, hash)
     }
 
-    import SafeLazyProxy.{strict => mkLazy}
+    import SafeLazyProxy.{ strict => mkLazy }
     import ReadersFeedback.ExpectedCompanionsInAnalyzedClass
     val compilationTimestamp = analyzedClass.compilationTimestamp
     val name = analyzedClass.name

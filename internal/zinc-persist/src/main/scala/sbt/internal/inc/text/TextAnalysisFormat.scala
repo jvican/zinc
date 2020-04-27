@@ -15,11 +15,11 @@ import java.io._
 
 import sbt.internal.inc._
 import sbt.util.InterfaceUtil
-import sbt.util.InterfaceUtil.{jo2o, position, problem}
-import xsbti.{T2, UseScope}
+import sbt.util.InterfaceUtil.{ jo2o, position, problem }
+import xsbti.{ T2, UseScope }
 import xsbti.api._
 import xsbti.compile._
-import xsbti.compile.analysis.{ReadWriteMappers, SourceInfo, Stamp}
+import xsbti.compile.analysis.{ ReadWriteMappers, SourceInfo, Stamp }
 import com.github.ghik.silencer.silent
 
 // A text-based serialization format for Analysis objects.
@@ -39,7 +39,7 @@ object TextAnalysisFormat extends TextAnalysisFormat(ReadWriteMappers.getEmptyMa
   // TODO: This is a big performance hit. Figure out a more efficient way to serialize API objects?
   import sbinary.DefaultProtocol._
   import sbinary.Format
-  import xsbti.{Position, Problem, Severity}
+  import xsbti.{ Position, Problem, Severity }
 
   private implicit val compilationF: Format[Compilation] = CompilationFormat
   private implicit val nameHashesFormat: Format[NameHash] = {
@@ -67,7 +67,7 @@ object TextAnalysisFormat extends TextAnalysisFormat(ReadWriteMappers.getEmptyMa
           jo2o(p.startColumn),
           jo2o(p.endLine),
           jo2o(p.endColumn)
-        )
+      )
     )
   }
   private implicit val severityFormat: Format[Severity] =
@@ -142,8 +142,8 @@ object TextAnalysisFormat extends TextAnalysisFormat(ReadWriteMappers.getEmptyMa
     def read(in: BufferedReader): Unit = {
       in.readLine() match {
         case versionPattern(version) => validateVersion(version)
-        case s: String => throw new ReadException("\"format version: <version>\"", s)
-        case null => throw new EOFException
+        case s: String               => throw new ReadException("\"format version: <version>\"", s)
+        case null                    => throw new EOFException
       }
     }
 
