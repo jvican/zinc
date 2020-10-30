@@ -15,7 +15,7 @@ import java.util.Optional
 import java.io.File
 import javax.tools.{ Diagnostic, JavaFileObject, DiagnosticListener }
 import sbt.io.IO
-import sbt.util.InterfaceUtil.{ o2jo, jo2o }
+import sbt.util.InterfaceUtil.o2jo
 import xsbti.{ Severity, Reporter }
 import javax.tools.Diagnostic.NOPOS
 
@@ -45,7 +45,7 @@ final class DiagnosticsReporter(reporter: Reporter) extends DiagnosticListener[J
     val msg = d.getMessage(null)
     val pos: xsbti.Position = PositionImpl(d)
     if (severity == Severity.Error) errorEncountered = true
-    reporter.log(problem("", pos, msg, severity))
+    reporter.log(problem("", pos, msg, severity, rendered = None))
   }
 }
 
@@ -60,21 +60,82 @@ object DiagnosticsReporter {
       override val lineContent: String,
       override val offset: Optional[Integer],
       override val startOffset: Optional[Integer],
-      override val endOffset: Optional[Integer]
+      override val endOffset: Optional[Integer],
+      override val startLine: Optional[Integer],
+      override val startColumn: Optional[Integer],
+      override val endLine: Optional[Integer],
+      override val endColumn: Optional[Integer]
   ) extends xsbti.Position {
     override val sourcePath: Optional[String] = o2jo(sourceUri)
     override val sourceFile: Optional[File] = o2jo(sourceUri.map(new File(_)))
     override val pointer: Optional[Integer] = o2jo(Option.empty[Integer])
     override val pointerSpace: Optional[String] = o2jo(Option.empty[String])
 
-    override val startLine: Optional[Integer] = o2jo(Option.empty)
-    override val startColumn: Optional[Integer] = o2jo(Option.empty)
-    override val endLine: Optional[Integer] = o2jo(Option.empty)
-    override val endColumn: Optional[Integer] = o2jo(Option.empty)
-
     override def toString: String =
       if (sourceUri.isDefined) s"${sourceUri.get}:${if (line.isPresent) line.get else -1}"
       else ""
+  }
+
+  /**
+   * VSCode documentation...
+   * A range in a text document expressed as (zero-based) start and end positions.
+   * A range is comparable to a selection in an editor.
+   * Therefore the end position is exclusive.
+   * If you want to specify a range that contains a line including the line ending character(s) then use an end position denoting the start of the next line.
+   * Here the lines are 1-based as ZincInternals subtracts 1 later
+   */
+  def contentAndRanges(cc: CharSequence,
+                       start: Long,
+                       end: Long): (Integer, Integer, Integer, Integer, String) = {
+    var startPos = start.toInt
+    var endPos = end.toInt
+    val lineContent = cc.subSequence(startPos, endPos).toString
+    // ignore CR or LF - depending on which one isn't found
+    var checkForN = true
+    var checkForR = true
+    // find startLine and startColumn
+    var startLine = 1
+    var startColumn = 0
+    startPos = startPos - 1
+    while (startPos >= 0) {
+      val ch = cc.charAt(startPos)
+      if (checkForR && ch == '\r') {
+        startLine = startLine + 1
+        checkForN = false
+      } else if (checkForN && ch == '\n') {
+        startLine = startLine + 1
+        checkForR = false
+      } else if (startLine == 1)
+        startColumn = startColumn + 1
+
+      startPos = startPos - 1
+    }
+    // find endLine and endColumn
+    var endLine = startLine
+    var endColumn = 0
+    endPos = endPos - 1
+    while (endPos >= start) {
+      // mimic linefeed if at the end of the file
+      if (endPos == cc.length)
+        endLine = endLine + 1
+      else {
+        val ch = cc.charAt(endPos)
+        if (checkForR && ch == '\r') {
+          endLine = endLine + 1
+          checkForN = false
+        } else if (checkForN && ch == '\n') {
+          endLine = endLine + 1
+          checkForR = false
+        } else if (endLine == startLine)
+          endColumn = endColumn + 1
+      }
+
+      endPos = endPos - 1
+    }
+    if (startLine == endLine)
+      endColumn = endColumn + startColumn
+
+    (startLine, startColumn, endLine, endColumn, lineContent)
   }
 
   private[sbt] object PositionImpl {
@@ -100,50 +161,63 @@ object DiagnosticsReporter {
         }
 
       val source: Option[JavaFileObject] = Option(d.getSource)
-      val sourcePath: Option[String] = source map (obj => IO.toFile(obj.toUri).getAbsolutePath)
-      val line: Optional[Integer] = o2jo(checkNoPos(d.getLineNumber) map (_.toInt))
-      val offset: Optional[Integer] = o2jo(checkNoPos(d.getPosition) map (_.toInt))
-      val startOffset: Optional[Integer] = o2jo(checkNoPos(d.getStartPosition) map (_.toInt))
-      val endOffset: Optional[Integer] = o2jo(checkNoPos(d.getEndPosition) map (_.toInt))
-
-      def lineContent: String = {
-        def getDiagnosticLine: Option[String] =
-          try {
-            def invoke(obj: Any, m: java.lang.reflect.Method, args: AnyRef*) =
-              Option(m.invoke(obj, args: _*))
-            // See com.sun.tools.javac.api.ClientCodeWrapper.DiagnosticSourceUnwrapper
-            val diagnostic = d.getClass.getField("d").get(d)
-            // See com.sun.tools.javac.util.JCDiagnostic#getDiagnosticSource
-            val getDiagnosticSource = diagnostic.getClass.getDeclaredMethod("getDiagnosticSource")
-            val getPosition = diagnostic.getClass.getDeclaredMethod("getPosition")
-            (invoke(diagnostic, getDiagnosticSource), invoke(diagnostic, getPosition)) match {
-              case (Some(diagnosticSource), Some(position: java.lang.Long)) =>
-                // See com.sun.tools.javac.util.DiagnosticSource
-                val getLineMethod = diagnosticSource.getClass.getMethod("getLine", Integer.TYPE)
-                invoke(diagnosticSource, getLineMethod, new Integer(position.intValue()))
-                  .map(_.toString)
-              case _ => None
-            }
-          } catch {
-            case _: ReflectiveOperationException => None
-          }
-
-        def getExpression: String =
-          source match {
-            case None => ""
-            case Some(source) =>
-              (Option(source.getCharContent(true)), jo2o(startOffset), jo2o(endOffset)) match {
-                case (Some(cc), Some(start), Some(end)) =>
-                  cc.subSequence(start, end).toString
-                case _ => ""
-              }
-          }
-
-        getDiagnosticLine.getOrElse(getExpression)
+      val sourcePath: Option[String] = source match {
+        case Some(obj) =>
+          val uri = obj.toUri
+          if (uri.getScheme == "file") Some(IO.toFile(uri).getAbsolutePath)
+          else Some(uri.toString)
+        case _ => None
       }
 
-      new PositionImpl(sourcePath, line, lineContent, offset, startOffset, endOffset)
-    }
+      def startPosition: Option[Long] = checkNoPos(d.getStartPosition)
+      def endPosition: Option[Long] = checkNoPos(d.getEndPosition)
 
+      val line: Optional[Integer] = o2jo(checkNoPos(d.getLineNumber) map (_.toInt))
+      val offset: Optional[Integer] = o2jo(checkNoPos(d.getPosition) map (_.toInt))
+      val startOffset: Optional[Integer] = o2jo(startPosition map (_.toInt))
+      val endOffset: Optional[Integer] = o2jo(endPosition map (_.toInt))
+
+      def noPositionInfo
+        : (Optional[Integer], Optional[Integer], Optional[Integer], Optional[Integer], String) =
+        if (line.isPresent)
+          (line, o2jo(Some(0)), Optional.of(line.get() + 1), o2jo(Some(0)), "")
+        else
+          (o2jo(Option.empty[Integer]),
+           o2jo(Option.empty[Integer]),
+           o2jo(Option.empty[Integer]),
+           o2jo(Option.empty[Integer]),
+           "")
+
+      // TODO - Is this pulling contents of the line correctly?
+      // Would be ok to just return null if this version of the JDK doesn't support grabbing
+      // source lines?
+      val (startLine, startColumn, endLine, endColumn, lineContent) =
+        source match {
+          case Some(source: JavaFileObject) =>
+            (Option(source.getCharContent(true)), startPosition, endPosition) match {
+              case (Some(cc), Some(start), Some(end)) =>
+                // can't optimise using line as it's not always the same as startLine
+                val range = contentAndRanges(cc, start, end)
+                (o2jo(Option(range._1)),
+                 o2jo(Option(range._2)),
+                 o2jo(Option(range._3)),
+                 o2jo(Option(range._4)),
+                 range._5)
+              case _ => noPositionInfo
+            }
+          case _ => noPositionInfo
+        }
+
+      new PositionImpl(sourcePath,
+                       line,
+                       lineContent,
+                       offset,
+                       startOffset,
+                       endOffset,
+                       startLine,
+                       startColumn,
+                       endLine,
+                       endColumn)
+    }
   }
 }
